@@ -1,4 +1,4 @@
-import type { Tags } from "osm-api";
+import type { Tags, UploadResult } from "osm-api";
 
 export type { OsmFeature, OsmNode, OsmRelation, OsmWay, Tags } from "osm-api";
 
@@ -48,7 +48,7 @@ export interface ApplyBatchedChangesArguments {
 }
 
 export interface AppliedBatch {
-  changesetId: number;
+  changesets: UploadResult;
   createCount: number;
   modifyCount: number;
   deleteCount: number;

@@ -392,7 +392,7 @@ export class OsmApiClient {
         }
 
         const maxSpanMeters = calculateMaxBatchSpanMeters(batchWithCoordinates);
-        const changesetId = await uploadChangeset(
+        const changesets = await uploadChangeset(
           {
             ...this.resolveChangesetTags(changesetTags),
             comment: buildChangesetComment({
@@ -413,7 +413,7 @@ export class OsmApiClient {
         );
 
         appliedBatches.push({
-          changesetId,
+          changesets,
           createCount: createNodes.length,
           modifyCount: modifyNodes.length,
           deleteCount: deleteNodes.length,
