@@ -1,0 +1,334 @@
+---
+import {
+  getSyncOverviewStats,
+  listIssueTypeCounts,
+  listRecentSyncRuns,
+} from "@repo/sync-store";
+import Layout from "../layouts/Layout.astro";
+import { issueTypeLabels } from "../utils/constants";
+import { formatDateTime } from "../utils/formatDateTime";
+import { formatDistanceToNow } from "../utils/formatDistanceToNow";
+import { formatDuration } from "../utils/formatDuration";
+import { formatNumber } from "../utils/formatNumber";
+
+export const prerender = false;
+
+const [overview, recentRuns, openIssueTypeCounts] = await Promise.all([
+  getSyncOverviewStats(),
+  listRecentSyncRuns(6),
+  listIssueTypeCounts(),
+]);
+
+const baselineRun = overview.latestSuccessfulRun ?? overview.latestRun;
+---
+
+<Layout title="Sync Overview | Hjertestarterregister2OSM">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Live Operational Snapshot</p>
+      <h2>Registry and OSM sync health at a glance</h2>
+      <p class="subtle">
+        Last successful sync {
+          overview.latestSuccessfulRun?.finishedAt
+            ? formatDistanceToNow(overview.latestSuccessfulRun.finishedAt)
+            : "has not completed yet"
+        }.
+      </p>
+    </div>
+    <a href="/runs" class="cta">View full run log</a>
+  </section>
+
+  <section class="stats-grid">
+    <article>
+      <h3>AEDs in OSM</h3>
+      <p class="metric">{formatNumber(baselineRun?.osmAeds)}</p>
+      <small
+        >From latest {
+          baselineRun?.status === "success" ? "successful" : "recorded"
+        } run</small
+      >
+    </article>
+    <article>
+      <h3>AEDs in registry</h3>
+      <p class="metric">{formatNumber(baselineRun?.registryAeds)}</p>
+      <small>Unique AED refs from source API</small>
+    </article>
+    <article>
+      <h3>Linked AEDs</h3>
+      <p class="metric">{formatNumber(baselineRun?.linkedAeds)}</p>
+      <small
+        >Nodes currently matched by <code>ref:hjertestarterregister</code
+        ></small
+      >
+    </article>
+    <article>
+      <h3>Current issues</h3>
+      <p class="metric">{formatNumber(overview.openIssueCount)}</p>
+      <small>Captured from the latest reconciler run</small>
+    </article>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h3>Recent runs</h3>
+      <a href="/runs">See all</a>
+    </header>
+    {
+      recentRuns.length ? (
+        <table>
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Status</th>
+              <th>Mode</th>
+              <th>Duration</th>
+              <th>Updated</th>
+              <th>Created</th>
+              <th>Deleted</th>
+              <th>Unchanged</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentRuns.map((run) => (
+              <tr>
+                <td>
+                  <a href={`/runs/${run.id}`}>
+                    {formatDateTime(run.startedAt)}
+                  </a>
+                </td>
+                <td>
+                  <span class={`pill ${run.status}`}>{run.status}</span>
+                </td>
+                <td>{run.mode}</td>
+                <td>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                <td>{formatNumber(run.updated)}</td>
+                <td>{formatNumber(run.created)}</td>
+                <td>{formatNumber(run.deleted)}</td>
+                <td>{formatNumber(run.unchanged)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="empty">No runs recorded yet.</p>
+      )
+    }
+  </section>
+
+  <section class="panel issue-breakdown">
+    <header>
+      <h3>Current issue types</h3>
+      <a href="/issues">View issues</a>
+    </header>
+    {
+      openIssueTypeCounts.length ? (
+        <ul>
+          {openIssueTypeCounts.map((entry) => (
+            <li>
+              <span>{issueTypeLabels[entry.issueType] ?? entry.issueType}</span>
+              <strong>{formatNumber(entry.count)}</strong>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">No current issues.</p>
+      )
+    }
+  </section>
+</Layout>
+
+<style>
+  .hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.2rem 1.3rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--bg-1);
+    margin-bottom: 1rem;
+    align-items: start;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+  }
+
+  .hero h2 {
+    margin: 0.4rem 0;
+    font-size: clamp(1.3rem, 2.8vw, 1.9rem);
+  }
+
+  .subtle {
+    margin: 0;
+    color: var(--ink-subtle);
+  }
+
+  .cta {
+    padding: 0.6rem 1rem;
+    border-radius: 0.8rem;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .stats-grid article {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .stats-grid h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ink-subtle);
+  }
+
+  .metric {
+    margin: 0.4rem 0;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    font-variant: tabular-nums;
+  }
+
+  .stats-grid small {
+    color: var(--ink-subtle);
+  }
+
+  .stats-grid code {
+    background: #eef2f0;
+    border-radius: 0.35rem;
+    padding: 0.05rem 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .panel header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .panel header h3 {
+    margin: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem;
+    border-bottom: 1px solid #dbe3df;
+    font-size: 0.92rem;
+  }
+
+  .pill {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .pill.success {
+    background: #d7f2e8;
+    color: #126d53;
+  }
+
+  .pill.failed {
+    background: #fbe2df;
+    color: var(--error);
+  }
+
+  .pill.running {
+    background: #fdefd9;
+    color: var(--warning);
+  }
+
+  .issue-breakdown ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .issue-breakdown li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border: 1px solid #dbe3df;
+    border-radius: 0.65rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .empty {
+    margin: 0.6rem 0;
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 980px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .hero {
+      flex-direction: column;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tr {
+      border: 1px solid #dbe3df;
+      border-radius: 0.65rem;
+      margin-bottom: 0.7rem;
+      padding: 0.3rem;
+    }
+
+    td {
+      border: none;
+      padding: 0.3rem;
+    }
+  }
+</style>

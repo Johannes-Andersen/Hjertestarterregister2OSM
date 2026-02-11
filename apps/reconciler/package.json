@@ -1,0 +1,14 @@
+{
+  "name": "reconciler",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@types/node": "25.2.3",
+    "@repo/hjertestarterregister-api": "workspace:*",
+    "@repo/overpass-sdk": "workspace:*",
+    "@repo/osm-sdk": "workspace:*",
+    "@repo/sync-store": "workspace:*",
+    "@repo/typescript-config": "workspace:*"
+  }
+}

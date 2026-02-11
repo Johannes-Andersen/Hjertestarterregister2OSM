@@ -1,0 +1,147 @@
+---
+import { listRecentSyncRuns } from "@repo/sync-store";
+import Layout from "../../layouts/Layout.astro";
+import { formatDateTime } from "../../utils/formatDateTime";
+import { formatDuration } from "../../utils/formatDuration";
+import { formatNumber } from "../../utils/formatNumber";
+
+export const prerender = false;
+
+const runs = await listRecentSyncRuns(200);
+---
+
+<Layout title="Run Log | Hjertestarterregister2OSM">
+  <section class="panel">
+    <header>
+      <div>
+        <p class="eyebrow">Reconciliation History</p>
+        <h2>Recent sync runs</h2>
+      </div>
+      <span>{formatNumber(runs.length)} shown</span>
+    </header>
+
+    {
+      runs.length ? (
+        <table>
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Status</th>
+              <th>Mode</th>
+              <th>Duration</th>
+              <th>Updated</th>
+              <th>Created</th>
+              <th>Deleted</th>
+              <th>Skipped nearby</th>
+              <th>Skipped delete</th>
+              <th>Unchanged</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr>
+                <td>
+                  <a href={`/runs/${run.id}`}>
+                    {formatDateTime(run.startedAt)}
+                  </a>
+                </td>
+                <td>
+                  <span class={`pill ${run.status}`}>{run.status}</span>
+                </td>
+                <td>{run.mode}</td>
+                <td>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                <td>{formatNumber(run.updated)}</td>
+                <td>{formatNumber(run.created)}</td>
+                <td>{formatNumber(run.deleted)}</td>
+                <td>{formatNumber(run.skippedCreateNearby)}</td>
+                <td>{formatNumber(run.skippedDeleteNotAedOnly)}</td>
+                <td>{formatNumber(run.unchanged)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="empty">No runs found.</p>
+      )
+    }
+  </section>
+</Layout>
+
+<style>
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 1rem;
+  }
+
+  .panel header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
+  }
+
+  h2 {
+    margin: 0.2rem 0 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem;
+    border-bottom: 1px solid #dbe3df;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .pill {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .pill.success {
+    background: #d7f2e8;
+    color: #126d53;
+  }
+
+  .pill.failed {
+    background: #fbe2df;
+    color: var(--error);
+  }
+
+  .pill.running {
+    background: #fdefd9;
+    color: var(--warning);
+  }
+
+  .empty {
+    margin: 0.4rem 0;
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 1080px) {
+    .panel {
+      overflow-x: auto;
+    }
+  }
+</style>

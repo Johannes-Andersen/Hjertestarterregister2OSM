@@ -1,0 +1,225 @@
+---
+import { listIssueTypeCounts, listSyncRunIssues } from "@repo/sync-store";
+import Layout from "../layouts/Layout.astro";
+import { issueTypeLabels } from "../utils/constants";
+import { formatDateTime } from "../utils/formatDateTime";
+import { formatNumber } from "../utils/formatNumber";
+
+export const prerender = false;
+
+const [issues, issueTypeCounts] = await Promise.all([
+  listSyncRunIssues({ limit: 400 }),
+  listIssueTypeCounts(),
+]);
+---
+
+<Layout title="Issue Dashboard | Hjertestarterregister2OSM">
+  <section class="panel">
+    <header>
+      <div>
+        <p class="eyebrow">Issue Monitoring</p>
+        <h2>Current issues from latest run</h2>
+      </div>
+    </header>
+
+    {
+      issueTypeCounts.length ? (
+        <ul class="summary-list">
+          {issueTypeCounts.map((entry) => (
+            <li>
+              <span>{issueTypeLabels[entry.issueType] ?? entry.issueType}</span>
+              <strong>{formatNumber(entry.count)}</strong>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">No issue categories found.</p>
+      )
+    }
+  </section>
+
+  <section class="panel">
+    <header>
+      <h3>Current issues</h3>
+      <span>{formatNumber(issues.length)} shown</span>
+    </header>
+
+    {
+      issues.length ? (
+        <div class="issues-grid">
+          {issues.map((issue) => (
+            <article class={`issue-card ${issue.severity}`}>
+              <div class="top-row">
+                <span class="type">
+                  {issueTypeLabels[issue.issueType] ?? issue.issueType}
+                </span>
+                <span class="severity">{issue.severity}</span>
+              </div>
+              <p class="message">{issue.message}</p>
+              <ul>
+                <li>
+                  <strong>Run:</strong>{" "}
+                  <a href={`/runs/${issue.runId}`}>
+                    {issue.runId.slice(0, 8)}...
+                  </a>
+                </li>
+                <li>
+                  <strong>Created:</strong> {formatDateTime(issue.createdAt)}
+                </li>
+                <li>
+                  <strong>Register ref:</strong> {issue.registerRef ?? "-"}
+                </li>
+                <li>
+                  <strong>OSM node:</strong>
+                  {issue.osmNodeId ? (
+                    <a
+                      href={`https://www.openstreetmap.org/node/${issue.osmNodeId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {issue.osmNodeId}
+                    </a>
+                  ) : (
+                    " -"
+                  )}
+                </li>
+              </ul>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p class="empty">No current issues.</p>
+      )
+    }
+  </section>
+</Layout>
+
+<style>
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .panel header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
+  }
+
+  h2,
+  h3 {
+    margin: 0.2rem 0 0;
+  }
+
+  .summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .summary-list li {
+    border: 1px solid #dbe3df;
+    border-radius: 0.7rem;
+    padding: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .issues-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .issue-card {
+    border: 1px solid #dbe3df;
+    border-radius: 0.9rem;
+    padding: 0.8rem;
+    background: #fff;
+  }
+
+  .issue-card.warning {
+    box-shadow: inset 4px 0 0 #c05e1d;
+  }
+
+  .issue-card.error {
+    box-shadow: inset 4px 0 0 #b42318;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .type {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .severity {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.07em;
+    color: var(--ink-subtle);
+  }
+
+  .message {
+    margin: 0.3rem 0 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .issue-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.87rem;
+    color: var(--ink-subtle);
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 960px) {
+    .summary-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .issues-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .summary-list {
+      grid-template-columns: 1fr;
+    }
+
+    .panel header {
+      flex-direction: column;
+      align-items: start;
+    }
+  }
+</style>

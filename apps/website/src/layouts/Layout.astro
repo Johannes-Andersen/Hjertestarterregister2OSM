@@ -1,0 +1,256 @@
+---
+import { Font } from "astro:assets";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Hjertestarterregister Sync Dashboard",
+  description = "Operational dashboard for Hjertestarterregister to OpenStreetMap sync runs.",
+} = Astro.props;
+
+const navItems = [
+  { href: "/", label: "Overview" },
+  { href: "/runs", label: "Runs" },
+  { href: "/issues", label: "Issues" },
+];
+
+const isActivePath = (href: string) =>
+  Astro.url.pathname === href ||
+  (href !== "/" && Astro.url.pathname.startsWith(`${href}/`));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="description" content={description} />
+    <Font cssVariable="--font-inter" preload />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="background-shape shape-a"></div>
+    <div class="background-shape shape-b"></div>
+    <header class="site-header">
+      <a class="brand" href="/">
+        <h1>Hjertestarterregister -> OSM</h1>
+      </a>
+      <nav>
+        <ul>
+          {
+            navItems.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class={isActivePath(item.href) ? "active" : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </header>
+    <main class="content">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <section class="site-footer-panel" role="note">
+        <p>
+          This is not an official service provided by any government or
+          organization, nor is in any way endorsed by OpenSteetMap nor the
+          Norwegian authorities. It is built and maintained by volunteers in
+          their spare time, and relies on the open data provided by 113's
+          Hjertestarterregister.
+        </p>
+        <p>
+          If you find issues in the underlying data (location, description,
+          opening hours, or outdated information), contact
+          <a href="mailto:hjertestarterregister@ous-hf.no">
+            hjertestarterregister@ous-hf.no
+          </a>.
+        </p>
+        <p>
+          To add a new AED to the registry, use
+          <a
+            href="https://hjertestarterregister.113.no/"
+            target="_blank"
+            rel="noreferrer">hjertestarterregister.113.no</a
+          >.
+        </p>
+        <p>
+          Website source code:
+          <a
+            href="https://github.com/Johannes-Andersen/Hjertestarterregister2OSM"
+            target="_blank"
+            rel="noreferrer"
+            >github.com/Johannes-Andersen/Hjertestarterregister2OSM</a
+          >.
+        </p>
+      </section>
+    </footer>
+  </body>
+</html>
+
+<style>
+  :root {
+    --bg-0: #f5f4ef;
+    --bg-1: #fdfcf8;
+    --ink: #1f2d2f;
+    --ink-subtle: #4f5f61;
+    --line: #ced6d3;
+    --accent: #007f5f;
+    --accent-soft: #dff5ec;
+    --error: #b42318;
+    --warning: #c05e1d;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 10% 10%, #fcf2df 0%, transparent 42%),
+      radial-gradient(circle at 95% 0%, #d9f5eb 0%, transparent 35%),
+      var(--bg-0);
+    color: var(--ink);
+    font-family: var(--font-inter);
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .site-header {
+    padding: 1.5rem clamp(1rem, 3vw, 3rem);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand {
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  .brand h1 {
+    margin: 0.2rem 0 0;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 700;
+  }
+
+  nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.7rem;
+  }
+
+  nav a {
+    display: inline-flex;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    color: var(--ink-subtle);
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    border-color: var(--line);
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  nav a.active {
+    color: var(--ink);
+    border-color: #9bc9bb;
+    background: var(--accent-soft);
+  }
+
+  .content {
+    padding: 0 clamp(1rem, 3vw, 3rem) 2.5rem;
+    position: relative;
+    z-index: 1;
+    animation: slide-up 350ms ease-out;
+  }
+
+  .site-footer {
+    padding: 0 0 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .site-footer-panel {
+    margin: 0 clamp(1rem, 3vw, 3rem);
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--ink);
+    font-size: 0.93rem;
+  }
+
+  .site-footer-panel p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .site-footer-panel p + p {
+    margin-top: 0.4rem;
+  }
+
+  .site-footer-panel a {
+    color: var(--accent);
+  }
+
+  .background-shape {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 999px;
+    filter: blur(20px);
+    opacity: 0.45;
+    z-index: 0;
+  }
+
+  .shape-a {
+    width: min(38vw, 420px);
+    height: min(38vw, 420px);
+    top: -70px;
+    right: -80px;
+    background: #90d7bf;
+  }
+
+  .shape-b {
+    width: min(34vw, 380px);
+    height: min(34vw, 380px);
+    bottom: -100px;
+    left: -80px;
+    background: #f2b673;
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
