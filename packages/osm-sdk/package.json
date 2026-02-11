@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "@repo/typescript-config": "workspace:*",
-    "osm-api": "3.3.2"
+    "osm-api": "4.0.0"
   }
 }
