@@ -31,7 +31,6 @@ export default defineConfig({
   },
   experimental: {
     svgo: true,
-    clientPrerender: true,
     chromeDevtoolsWorkspace: true,
     csp: {
       algorithm: "SHA-512",
