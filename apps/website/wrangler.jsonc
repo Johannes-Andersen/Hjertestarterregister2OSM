@@ -16,5 +16,12 @@
       "binding": "HYPERDRIVE",
       "id": "bcf52112304449edb300c05c13ad4f9f"
     }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SESSION",
+      "id": "71b7402202b0409e84674f692e67ff43",
+      "remote": true
+    }
   ]
 }

@@ -6,7 +6,10 @@ import { defineConfig, fontProviders } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
   output: "server",
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    imageService: "cloudflare",
+    sessionKVBindingName: "SESSION",
+  }),
   prefetch: {
     defaultStrategy: "hover",
     prefetchAll: true,
