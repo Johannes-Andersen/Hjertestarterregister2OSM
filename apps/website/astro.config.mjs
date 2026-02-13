@@ -5,17 +5,34 @@ import { defineConfig, fontProviders } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://hjertestarterregister2osm.johand.dev/",
   output: "server",
   adapter: cloudflare({
     imageService: "cloudflare",
     sessionKVBindingName: "SESSION",
   }),
+  compressHTML: true,
+  security: {
+    checkOrigin: true,
+    allowedDomains: [
+      {
+        protocol: "https",
+        hostname: "hjertestarterregister2osm.johand.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "**.johand.workers.dev",
+      },
+    ],
+  },
   prefetch: {
     defaultStrategy: "hover",
     prefetchAll: true,
   },
   experimental: {
+    svgo: true,
     clientPrerender: true,
+    chromeDevtoolsWorkspace: true,
     fonts: [
       {
         provider: fontProviders.fontsource(),
