@@ -1,6 +1,26 @@
 import type { RegisterAed } from "../register/type.ts";
 import type { AedTags } from "../types/aedTags.ts";
 
+/** OSM enforces a 255 unicode character limit on tag values */
+const OSM_MAX_TAG_VALUE_LENGTH = 255;
+
+/**
+ * Check if a tag value exceeds OSM's limit and return null if so.
+ * Logs a warning when skipping oversized values.
+ */
+const validateTagValue = (
+  value: string,
+  tagName: string,
+  aedGuid: string,
+): string | null => {
+  if (value.length <= OSM_MAX_TAG_VALUE_LENGTH) return value;
+
+  console.warn(
+    `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${value.length} chars)`,
+  );
+  return null;
+};
+
 type DayRange = { day: string; from?: number; to?: number };
 
 const dayRangesFromRegister = (aed: RegisterAed): DayRange[] => [
@@ -120,7 +140,10 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
   };
 
   const name = typeof aed.SITE_NAME === "string" ? aed.SITE_NAME.trim() : "";
-  if (name) tags.name = name;
+  if (name) {
+    const validName = validateTagValue(name, "name", aed.ASSET_GUID);
+    if (validName) tags.name = validName;
+  }
 
   if (
     typeof aed.SITE_FLOOR_NUMBER === "number" &&
@@ -131,7 +154,14 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
 
   const location =
     typeof aed.SITE_DESCRIPTION === "string" ? aed.SITE_DESCRIPTION.trim() : "";
-  if (location) tags["defibrillator:location"] = location;
+  if (location) {
+    const validLocation = validateTagValue(
+      location,
+      "defibrillator:location",
+      aed.ASSET_GUID,
+    );
+    if (validLocation) tags["defibrillator:location"] = validLocation;
+  }
 
   const model =
     typeof aed.ASSET_TYPE_NAME === "string" ? aed.ASSET_TYPE_NAME.trim() : "";
