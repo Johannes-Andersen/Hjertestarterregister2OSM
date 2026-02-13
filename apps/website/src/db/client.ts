@@ -4,7 +4,6 @@ export const createSql = (connectionString: string) => {
   return postgres(connectionString, {
     max: 5,
     fetch_types: false,
-    prepare: true,
-    ssl: "require",
+    prepare: false,
   });
 };
