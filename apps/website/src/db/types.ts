@@ -29,33 +29,49 @@ export interface SyncRunMetrics extends SyncRunCounters {
   linkedAeds: number;
 }
 
-export interface SyncRunRecord extends SyncRunMetrics {
+// Full record - used only for single run detail page
+export interface SyncRunRecord extends SyncRunCounters {
   id: string;
   startedAt: Date;
   finishedAt: Date | null;
   status: SyncRunStatus;
   mode: SyncRunMode;
   errorMessage: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  linkedAeds: number;
 }
 
-export interface SyncRunIssueRecord {
+// Lightweight record for run listings (tables)
+export interface SyncRunListItem extends SyncRunCounters {
   id: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  status: SyncRunStatus;
+  mode: SyncRunMode;
+}
+
+// Minimal data needed for overview stats cards
+export interface SyncOverviewRunData {
+  finishedAt: Date | null;
+  status: SyncRunStatus;
+  registryAeds: number;
+  osmAeds: number;
+  linkedAeds: number;
+}
+
+// Lightweight issue record for listings (excludes unused 'details' JSONB)
+export interface SyncRunIssueListItem {
   runId: string;
   issueType: SyncIssueType;
   severity: SyncIssueSeverity;
   message: string;
   registerRef: string | null;
   osmNodeId: number | null;
-  details: Record<string, unknown>;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface SyncOverviewStats {
-  latestRun: SyncRunRecord | null;
-  latestSuccessfulRun: SyncRunRecord | null;
+  latestRun: SyncOverviewRunData | null;
+  latestSuccessfulRun: SyncOverviewRunData | null;
   openIssueCount: number;
   totalIssueCount: number;
 }

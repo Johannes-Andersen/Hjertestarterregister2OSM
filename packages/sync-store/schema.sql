@@ -21,7 +21,15 @@ CREATE TABLE IF NOT EXISTS sync_runs (
 );
 
 CREATE INDEX IF NOT EXISTS sync_runs_started_at_idx ON sync_runs (started_at DESC);
-CREATE INDEX IF NOT EXISTS sync_runs_status_idx ON sync_runs (status, started_at DESC);
+
+-- Partial index for successful runs - used by overview stats query
+-- More efficient than filtering all rows when querying latest successful run
+CREATE INDEX IF NOT EXISTS sync_runs_success_finished_idx 
+  ON sync_runs (finished_at DESC NULLS LAST) 
+  WHERE status = 'success';
+
+-- Drop the less efficient generic status index if it exists
+DROP INDEX IF EXISTS sync_runs_status_idx;
 
 CREATE TABLE IF NOT EXISTS sync_run_issues (
   id TEXT PRIMARY KEY,
@@ -57,6 +65,15 @@ DROP INDEX IF EXISTS sync_run_issues_open_issue_key_uidx;
 
 TRUNCATE TABLE sync_run_issues;
 
+-- Index for filtering issues by run_id and ordering by created_at
 CREATE INDEX IF NOT EXISTS sync_run_issues_run_id_idx ON sync_run_issues (run_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS sync_run_issues_type_idx ON sync_run_issues (issue_type, created_at DESC);
-CREATE INDEX IF NOT EXISTS sync_run_issues_osm_node_idx ON sync_run_issues (osm_node_id);
+
+-- Index for issue type grouping/counting
+CREATE INDEX IF NOT EXISTS sync_run_issues_type_idx ON sync_run_issues (issue_type);
+
+-- Index for global issue listing (no run_id filter) ordered by created_at
+CREATE INDEX IF NOT EXISTS sync_run_issues_created_idx ON sync_run_issues (created_at DESC);
+
+-- Index for OSM node lookup
+CREATE INDEX IF NOT EXISTS sync_run_issues_osm_node_idx ON sync_run_issues (osm_node_id)
+  WHERE osm_node_id IS NOT NULL;
