@@ -4,6 +4,15 @@
   "main": "./dist/_worker.js/index.js",
   "compatibility_date": "2026-01-07",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "placement": {
+    "mode": "off"
+  },
+  "workers_dev": false,
+  "preview_urls": true,
+  "route": {
+    "pattern": "hjertestarterregister2osm.johand.dev",
+    "custom_domain": true
+  },
   "observability": {
     "enabled": true
   },
