@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "hjertestarterregister2osm-website",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2026-01-07",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "bcf52112304449edb300c05c13ad4f9f"
+    }
+  ]
+}

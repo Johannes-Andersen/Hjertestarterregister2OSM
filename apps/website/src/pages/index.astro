@@ -1,9 +1,10 @@
 ---
+import { createSql } from "../db/client";
 import {
   getSyncOverviewStats,
   listIssueTypeCounts,
   listRecentSyncRuns,
-} from "@repo/sync-store";
+} from "../db/queries";
 import Layout from "../layouts/Layout.astro";
 import { issueTypeLabels } from "../utils/constants";
 import { formatDateTime } from "../utils/formatDateTime";
@@ -13,10 +14,11 @@ import { formatNumber } from "../utils/formatNumber";
 
 export const prerender = false;
 
+const sql = createSql(Astro.locals.runtime.env.HYPERDRIVE.connectionString);
 const [overview, recentRuns, openIssueTypeCounts] = await Promise.all([
-  getSyncOverviewStats(),
-  listRecentSyncRuns(6),
-  listIssueTypeCounts(),
+  getSyncOverviewStats(sql),
+  listRecentSyncRuns(sql, 6),
+  listIssueTypeCounts(sql),
 ]);
 
 const baselineRun = overview.latestSuccessfulRun ?? overview.latestRun;

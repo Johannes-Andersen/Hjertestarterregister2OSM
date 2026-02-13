@@ -1,14 +1,12 @@
 // @ts-check
 
-import node from "@astrojs/node";
+import cloudflare from "@astrojs/cloudflare";
 import { defineConfig, fontProviders } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
   output: "server",
-  adapter: node({
-    mode: "standalone",
-  }),
+  adapter: cloudflare(),
   prefetch: {
     defaultStrategy: "hover",
     prefetchAll: true,

@@ -1,5 +1,6 @@
 ---
-import { listRecentSyncRuns } from "@repo/sync-store";
+import { createSql } from "../../db/client";
+import { listRecentSyncRuns } from "../../db/queries";
 import Layout from "../../layouts/Layout.astro";
 import { formatDateTime } from "../../utils/formatDateTime";
 import { formatDuration } from "../../utils/formatDuration";
@@ -7,7 +8,8 @@ import { formatNumber } from "../../utils/formatNumber";
 
 export const prerender = false;
 
-const runs = await listRecentSyncRuns(200);
+const sql = createSql(Astro.locals.runtime.env.HYPERDRIVE.connectionString);
+const runs = await listRecentSyncRuns(sql, 200);
 ---
 
 <Layout title="Run Log | Hjertestarterregister2OSM">

@@ -1,5 +1,6 @@
 ---
-import { getSyncRunById, listSyncRunIssues } from "@repo/sync-store";
+import { createSql } from "../../db/client";
+import { getSyncRunById, listSyncRunIssues } from "../../db/queries";
 import Layout from "../../layouts/Layout.astro";
 import { issueTypeLabels } from "../../utils/constants";
 import { formatDateTime } from "../../utils/formatDateTime";
@@ -14,10 +15,12 @@ if (!runId) {
   Astro.response.status = 400;
 }
 
+const sql = createSql(Astro.locals.runtime.env.HYPERDRIVE.connectionString);
+
 const [run, issues] = runId
   ? await Promise.all([
-      getSyncRunById(runId),
-      listSyncRunIssues({ runId, limit: 400 }),
+      getSyncRunById(sql, runId),
+      listSyncRunIssues(sql, { runId }),
     ])
   : [null, []];
 

@@ -1,5 +1,6 @@
 ---
-import { listIssueTypeCounts, listSyncRunIssues } from "@repo/sync-store";
+import { createSql } from "../db/client";
+import { listIssueTypeCounts, listSyncRunIssues } from "../db/queries";
 import Layout from "../layouts/Layout.astro";
 import { issueTypeLabels } from "../utils/constants";
 import { formatDateTime } from "../utils/formatDateTime";
@@ -7,9 +8,10 @@ import { formatNumber } from "../utils/formatNumber";
 
 export const prerender = false;
 
+const sql = createSql(Astro.locals.runtime.env.HYPERDRIVE.connectionString);
 const [issues, issueTypeCounts] = await Promise.all([
-  listSyncRunIssues({ limit: 400 }),
-  listIssueTypeCounts(),
+  listSyncRunIssues(sql, { limit: 400 }),
+  listIssueTypeCounts(sql),
 ]);
 ---
 
