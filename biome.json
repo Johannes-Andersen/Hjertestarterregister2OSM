@@ -40,6 +40,15 @@
       "linter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["**/worker-configuration.d.ts"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
     }
   ]
 }
