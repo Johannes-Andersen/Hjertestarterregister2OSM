@@ -44,9 +44,6 @@ importers:
       '@astrojs/cloudflare':
         specifier: 12.6.12
         version: 12.6.12(@types/node@25.2.3)(astro@5.17.2(@types/node@25.2.3)(rollup@4.57.1)(typescript@5.9.3)(yaml@2.8.2))(yaml@2.8.2)
-      '@repo/sync-store':
-        specifier: workspace:*
-        version: link:../../packages/sync-store
       astro:
         specifier: 5.17.2
         version: 5.17.2(@types/node@25.2.3)(rollup@4.57.1)(typescript@5.9.3)(yaml@2.8.2)
