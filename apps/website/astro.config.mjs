@@ -33,6 +33,22 @@ export default defineConfig({
     svgo: true,
     clientPrerender: true,
     chromeDevtoolsWorkspace: true,
+    csp: {
+      algorithm: "SHA-512",
+      directives: [
+        "default-src 'self'",
+        "frame-src 'self' https://challenges.cloudflare.com",
+        "connect-src 'self' cloudflareinsights.com",
+      ],
+      scriptDirective: {
+        resources: [
+          "'self'",
+          "ajax.cloudflare.com",
+          "static.cloudflareinsights.com",
+          "https://challenges.cloudflare.com",
+        ],
+      },
+    },
     fonts: [
       {
         provider: fontProviders.fontsource(),
