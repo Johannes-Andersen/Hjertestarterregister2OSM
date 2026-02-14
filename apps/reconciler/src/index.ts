@@ -2,7 +2,7 @@ import {
   HjertestarterregisterApiClient,
   type RegistryAsset,
 } from "@repo/hjertestarterregister-api";
-import { OSM } from "@repo/osm-sdk";
+import { OsmApiClient } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import {
   closeSyncStore,
@@ -168,23 +168,19 @@ const toErrorMessage = (error: unknown): string => {
   return "Unknown reconciler error";
 };
 
+const osmClient = new OsmApiClient({
+  apiUrl: process.env.OSM_API_URL,
+  bearerToken: process.env.OSM_AUTH_TOKEN,
+  changesetTags: changesetConfig.commonTags,
+  userAgent: "hjertestarterregister2osm/0.1",
+});
+
 const main = async () => {
   const mode: SyncRunMode = reconcilerConfig.dryRun ? "dry-run" : "live";
   const run = await startSyncRun({ mode });
   const issues: NewSyncIssue[] = [];
   const metrics: Partial<SyncRunMetrics> = {};
   let issuesPersisted = false;
-
-  const authHeader = process.env.OSM_AUTH_HEADER?.trim() || undefined;
-  const authToken = process.env.OSM_AUTH_TOKEN?.trim() || undefined;
-
-  OSM.configure({
-    apiUrl: process.env.OSM_API_URL,
-    authHeader,
-    bearerToken: authHeader ? undefined : authToken,
-    changesetTags: changesetConfig.commonTags,
-  });
-
   console.log(
     `Running reconciler in ${reconcilerConfig.dryRun ? "dry-run" : "live"} mode`,
   );
@@ -265,13 +261,14 @@ const main = async () => {
         console.log(`- ${outputPaths.oscPath}`);
         console.log(`- ${outputPaths.geojsonPath}`);
       } else {
-        const appliedBatches = await OSM.applyBatchedChanges({
+        const appliedChanges = await osmClient.applyBatchedChanges({
           changePlan,
-          maxDistanceMeters: reconcilerConfig.changesetBatchDistanceMeters,
+          commentSubject: changesetConfig.commentSubject,
         });
+        const changesetCount = Object.keys(appliedChanges.changesets).length;
 
         console.log(
-          `[live] Applied ${appliedBatches.length} changesets from planned changes`,
+          `[live] Applied ${changesetCount} changesets from planned changes`,
         );
       }
     } else if (reconcilerConfig.dryRun) {

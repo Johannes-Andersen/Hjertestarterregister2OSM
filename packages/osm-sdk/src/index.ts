@@ -1,4 +1,4 @@
-export { OSM, OsmApiClient } from "./client.ts";
+export { OsmApiClient } from "./client.ts";
 export { OsmSdkError } from "./errors.ts";
 
 export type {
@@ -9,7 +9,6 @@ export type {
   OsmNode,
   OsmRelation,
   OsmSdkClientOptions,
-  OsmSdkConfiguration,
   OsmWay,
   PlannedCreateChange,
   PlannedDeleteChange,

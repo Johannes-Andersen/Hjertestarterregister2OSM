@@ -2,15 +2,12 @@ import type { Tags, UploadResult } from "osm-api";
 
 export type { OsmFeature, OsmNode, OsmRelation, OsmWay, Tags } from "osm-api";
 
-export interface OsmSdkConfiguration {
+export interface OsmSdkClientOptions {
   apiUrl?: string;
-  authHeader?: string;
   bearerToken?: string;
   userAgent?: string;
   changesetTags?: Tags;
 }
-
-export type OsmSdkClientOptions = OsmSdkConfiguration;
 
 export interface PlannedNode {
   id: number;
@@ -42,9 +39,8 @@ export interface ChangePlan {
 
 export interface ApplyBatchedChangesArguments {
   changePlan: ChangePlan;
-  maxDistanceMeters: number;
   changesetTags?: Tags;
-  commentPrefix?: string;
+  commentSubject?: string;
 }
 
 export interface AppliedBatch {
@@ -52,5 +48,4 @@ export interface AppliedBatch {
   createCount: number;
   modifyCount: number;
   deleteCount: number;
-  maxSpanMeters: number;
 }

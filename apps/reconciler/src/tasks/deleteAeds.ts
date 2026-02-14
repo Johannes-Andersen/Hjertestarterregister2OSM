@@ -1,7 +1,7 @@
-import { OSM } from "@repo/osm-sdk";
+import { OsmApiClient } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue } from "@repo/sync-store";
-import { reconcilerConfig } from "../config.ts";
+import { changesetConfig, reconcilerConfig } from "../config.ts";
 import type { ChangePlan, PlannedNode } from "../dryRun/changePlan.ts";
 import type { RegisterAed } from "../register/type.ts";
 import { isAedOnlyNode } from "../utils/isAedOnlyNode.ts";
@@ -16,6 +16,13 @@ interface Arguments {
   summary: ReconciliationSummary;
   issues: NewSyncIssue[];
 }
+
+const osmClient = new OsmApiClient({
+  apiUrl: process.env.OSM_API_URL,
+  bearerToken: process.env.OSM_AUTH_TOKEN,
+  changesetTags: changesetConfig.commonTags,
+  userAgent: "hjertestarterregister2osm/0.1",
+});
 
 export const deleteAeds = async ({
   filteredAedNodes,
@@ -60,7 +67,7 @@ export const deleteAeds = async ({
         tags: { ...(node.tags ?? {}) },
       };
     } else {
-      const existingNode = await OSM.getNodeFeature(node.id);
+      const existingNode = await osmClient.getNodeFeature(node.id);
       if (!isAedOnlyNode(existingNode)) {
         summary.skippedDeleteNotAedOnly++;
         issues.push({

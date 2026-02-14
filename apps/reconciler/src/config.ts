@@ -11,9 +11,7 @@ export const overpassConfig = {
 };
 
 export const changesetConfig = {
-  addedComment: "Added AED location",
-  modifiedComment: "Modified AED location",
-  deletedComment: "Deleted AED location",
+  commentSubject: "AED locations",
   commonTags: {
     created_by: "hjertestarterregister2osm v0.1",
     source: "https://hjertestarterregister.113.no/ords/f?p=110:1",
@@ -22,7 +20,6 @@ export const changesetConfig = {
 };
 
 export const reconcilerConfig = {
-  changesetBatchDistanceMeters: 20_000, // 20 km
   changedLocationDistanceMeters: 10,
   nearbyAedDistanceMeters: 20,
   dryRun: isDryRun,
