@@ -1,88 +1,156 @@
 # Hjertestarterregister -> OpenStreetMap
 
-Import and synchronization of AEDs (Automated External Defibrillators) from the Norwegian AED registry to OpenStreetMap.
+Automated reconciliation between the Norwegian AED registry and OpenStreetMap.
 
-## Repository Structure
+The project has two runtime parts:
 
-This is a monorepo managed by [Turborepo](https://turborepo.dev/). This means multiple apps and packages are stored in the same repository, but are logically separated and deployed independently.
+- `apps/reconciler`: loads registry + OSM data, plans and executes sync changes, stores metrics/issues.
+- `apps/website`: operational dashboard for run history and current issues.
 
-### Apps and Packages
+## Monorepo Overview
 
-- `website`: the website powered by astro.build
-- `reconciler`: the periodic run that imports data from https://hjertestarterregister.113.no/ and publishes it to OpenStreetMap
-- `@repo/sync-store`: shared PlanetScale PostgreSQL store for sync runs and issue tracking
-- `@repo/hjertestarterregister-sdk`: typed client package for the Hjertestarterregister API (OAuth + assets endpoints)
-- `@repo/osm-sdk`: typed OSM SDK package for authenticated API calls and batched changeset uploads
-- `@repo/overpass-sdk`: typed Overpass SDK package for generic query execution with retries and configurable endpoints
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+This repo uses `pnpm` workspaces + Turborepo.
 
-### Utilities
+- `apps/reconciler`: sync worker
+- `apps/website`: Dashboard written in Astro and deployed on Cloudflare Workers
+- `packages/hjertestarterregister-sdk`: typed API client (OAuth + assets endpoints)
+- `packages/overpass-sdk`: typed Overpass API client with retries
+- `packages/osm-sdk`: typed OSM API client
+- `packages/sync-store`: PostgreSQL data layer for runs/issues
+- `packages/typescript-config`: shared TS configs
 
-The project also utilizes the following tools across the monorepo:
+## Prerequisites
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [Biome](https://biomejs.dev/) for linting and formatting
-- [pnpm](https://pnpm.io/) as the package manager
+- Node `v25` (see `.nvmrc`)
+- `pnpm` `v10`
+- PostgreSQL database (for run/issue persistence)
+- Hjertestarterregister API credentials
+- OSM OAuth bearer token (live mode only)
+- For website deployment/local preview with bindings: Cloudflare + configured Hyperdrive/KV in `apps/website/wrangler.jsonc`
 
-### Build
+## Install
 
-To build all apps and packages, run the following command:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation)
-pnpm exec turbo build
+```bash
+pnpm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Environment
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=website
+`apps/reconciler` reads environment variables via `apps/reconciler/src/config.ts`.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation)
-pnpm exec turbo build --filter=docs
-```
+Required:
 
-### Develop
+- `HJERTESTARTERREGISTER_CLIENT_ID`
+- `HJERTESTARTERREGISTER_CLIENT_SECRET`
+- `DATABASE_URL`
 
-To develop all apps and packages, run the following command:
+Required only for live OSM writes:
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+- `OSM_AUTH_TOKEN` (required when `DRY=false`)
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation):
-pnpm exec turbo dev
-```
+Optional:
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+- `DRY` (`true` by default; set `false` for live mode)
+- `HJERTESTARTERREGISTER_API_BASE_URL`
+- `HJERTESTARTERREGISTER_OAUTH_TOKEN_URL`
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=website
+Example `apps/reconciler/.env`:
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation)
-pnpm exec turbo dev --filter=website
+```bash
+DRY=true
+DATABASE_URL=postgres://user:pass@host:5432/db
+HJERTESTARTERREGISTER_CLIENT_ID=...
+HJERTESTARTERREGISTER_CLIENT_SECRET=...
+# OSM_AUTH_TOKEN=...   # required when DRY=false
 ```
 
-## Sync Dashboard Database Setup
+Notes:
 
-Both `apps/reconciler` and `apps/website` read from the same PostgreSQL database.
+- In dry-run mode, no OSM upload is performed. Planned changes are written to `apps/reconciler/out/`.
+- In live mode, planned changes are uploaded to OSM using one or more changesets.
 
-1. Set `DATABASE_URL` (PlanetScale PostgreSQL connection string):
-   - `apps/reconciler/.env`
-   - `apps/website/.env`
-2. Create the required tables:
+## Database Setup
 
-```sh
+Create the sync tables:
+
+```bash
 psql "$DATABASE_URL" -f packages/sync-store/schema.sql
 ```
 
-After this, each reconciler run writes run outcomes and issues to the database. The Astro website is a read-only interface to show issues and metrics from the latest run.
+This creates:
+
+- `sync_runs`
+- `sync_run_issues`
+
+## Running the Reconciler
+
+```bash
+node --env-file=./apps/reconciler/.env apps/reconciler/src/index.ts
+```
+
+What to expect:
+
+- Starts a run in `sync_runs`
+- Builds a change plan
+- Dry-run: writes `.osc` + `.geojson` previews to `apps/reconciler/out/`
+- Live: uploads OSM changes
+- Stores final metrics and issues
+
+## Running the Website
+
+For local UI development:
+
+```bash
+pnpm --filter website dev
+```
+
+For local worker preview with Cloudflare bindings:
+
+```bash
+pnpm --filter website preview
+```
+
+The website reads DB connection via Cloudflare Hyperdrive binding:
+
+- `Astro.locals.runtime.env.HYPERDRIVE.connectionString`
+
+## Code Quality Commands
+
+```bash
+pnpm lint
+pnpm check-types
+pnpm build
+```
+
+## Reconciler Rules
+
+High-level behavior:
+
+- Fetch OSM AED elements from Overpass using the same Norway polygon used for registry filtering.
+- Fetch registry assets and ignore assets outside Norway polygon.
+- Respect OSM opt-out via `note=*`.
+- Resolve duplicate managed refs by keeping closest-to-registry node and deleting all other duplicates in that ref group.
+- Keep manually moved managed nodes when move is within tolerance (tags can still update).
+- Enforce standalone AED nodes: if AED is on a mixed-purpose POI (`amenity|leisure|tourism|shop|office|craft|club`), strip AED tags from source and create a dedicated AED node.
+- Try linking unmanaged OSM AED nodes to nearest unmatched registry AED within distance threshold.
+- Create new nodes for remaining unmatched registry AEDs unless a nearby AED already exists.
+
+[Thresholds/configurations](./apps/reconciler/src/config.ts).
+
+## Issue Types
+
+Current issue types emitted by reconciler:
+
+- `register_aed_outside_norway`
+- `osm_node_missing_ref`
+- `osm_node_note_opt_out`
+- `osm_duplicate_register_ref`
+- `aed_split_non_standalone_node`
+- `managed_node_location_within_tolerance`
+- `skipped_create_nearby`
+- `skipped_delete_not_aed_only`
 
 ## Useful Links
 
-- [Hjertestarterregisteret](https://hjertestarterregister.113.no/)
+- Registry: https://hjertestarterregister.113.no/
+- OSM: https://www.openstreetmap.org/

@@ -8,7 +8,6 @@
     "astro": "astro",
     "check-types": "astro check",
     "preview": "astro build && wrangler dev",
-    "deploy": "astro build && wrangler deploy",
     "gen-types": "wrangler types"
   },
   "dependencies": {
