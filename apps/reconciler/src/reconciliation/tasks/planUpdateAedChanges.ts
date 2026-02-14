@@ -1,11 +1,13 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
+import { osmClient } from "../../clients/osmClient.ts";
 import { reconcilerConfig } from "../../config.ts";
 import type { ReconciliationChangePlan } from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
+import { buildNodeElementIndex } from "../../utils/nearbyElements.ts";
 import {
   applyTagUpdates,
   buildStandaloneStripTagUpdates,
@@ -14,17 +16,6 @@ import {
 } from "../../utils/standaloneAed.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
-
-const buildNodeElementIndex = (elements: OverpassElements[]) => {
-  const indexByNodeId = new Map<number, number>();
-
-  for (const [index, element] of elements.entries()) {
-    if (element.type !== "node") continue;
-    indexByNodeId.set(element.id, index);
-  }
-
-  return indexByNodeId;
-};
 
 interface PlanUpdateAedChangesArgs {
   mode: SyncRunMode;
@@ -40,24 +31,24 @@ interface PlanUpdateAedChangesArgs {
 const locationDifferenceEpsilonMeters = 0.01;
 
 const getTagUpdates = ({
-  oldNode,
+  currentTags,
   mappedTags,
 }: {
-  oldNode: OverpassNode;
+  currentTags: Record<string, string>;
   mappedTags: ReturnType<typeof mapRegisterAedToOsmTags>;
 }): Record<string, string> => {
   const updates: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(mappedTags)) {
     if (value === undefined) continue;
-    if (oldNode.tags?.[key] === value) continue;
+    if (currentTags[key] === value) continue;
     updates[key] = value;
   }
 
   return updates;
 };
 
-export const planUpdateAedChanges = ({
+export const planUpdateAedChanges = async ({
   mode,
   managedAedNodes,
   registerAedsById,
@@ -79,12 +70,21 @@ export const planUpdateAedChanges = ({
     matchedRegisterIds.add(registerAed.ASSET_GUID);
 
     const mappedTags = mapRegisterAedToOsmTags(registerAed);
-    const hasStandaloneConflict = hasStandaloneConflictTags(node.tags);
 
-    if (hasStandaloneConflict) {
-      const stripUpdates = buildStandaloneStripTagUpdates(node.tags);
+    // Determine standalone conflict, using live data in live mode for accuracy
+    let effectiveTags = node.tags ?? {};
+    let standaloneConflict = hasStandaloneConflictTags(node.tags);
+
+    if (standaloneConflict && mode === "live") {
+      const liveNode = await osmClient.getNodeFeature(node.id);
+      effectiveTags = liveNode.tags ?? {};
+      standaloneConflict = hasStandaloneConflictTags(effectiveTags);
+    }
+
+    if (standaloneConflict) {
+      const stripUpdates = buildStandaloneStripTagUpdates(effectiveTags);
       const nextSourceNodeTags = applyTagUpdates({
-        currentTags: node.tags ?? {},
+        currentTags: effectiveTags,
         tagUpdates: stripUpdates,
       });
       const createdNodeId = -1 * (summary.created + 1);
@@ -126,7 +126,7 @@ export const planUpdateAedChanges = ({
         registerRef: registerAed.ASSET_GUID,
         osmNodeId: node.id,
         details: {
-          conflictTagKeys: listStandaloneConflictTagKeys(node.tags ?? {}),
+          conflictTagKeys: listStandaloneConflictTagKeys(effectiveTags),
         },
       });
 
@@ -152,7 +152,7 @@ export const planUpdateAedChanges = ({
     }
 
     const tagUpdates = getTagUpdates({
-      oldNode: node,
+      currentTags: node.tags ?? {},
       mappedTags,
     });
     const hasTagUpdates = Object.keys(tagUpdates).length > 0;

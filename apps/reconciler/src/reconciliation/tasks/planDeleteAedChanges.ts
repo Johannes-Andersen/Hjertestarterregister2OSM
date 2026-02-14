@@ -1,4 +1,4 @@
-import type { OverpassNode } from "@repo/overpass-sdk";
+import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
 import { osmClient } from "../../clients/osmClient.ts";
 import type {
@@ -8,6 +8,7 @@ import type {
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
+import { pruneDeletedNodesFromElements } from "../../utils/nearbyElements.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 
@@ -15,6 +16,7 @@ interface PlanDeleteAedChangesArgs {
   mode: SyncRunMode;
   managedAedNodes: OverpassNode[];
   registerAedsById: Map<string, RegisterAed>;
+  elementsForNearbyChecks: OverpassElements[];
   changePlan: ReconciliationChangePlan;
   summary: ReconciliationSummary;
   issues: NewSyncIssue[];
@@ -32,10 +34,13 @@ export const planDeleteAedChanges = async ({
   mode,
   managedAedNodes,
   registerAedsById,
+  elementsForNearbyChecks,
   changePlan,
   summary,
   issues,
 }: PlanDeleteAedChangesArgs) => {
+  const deletedNodeIds = new Set<number>();
+
   for (const node of managedAedNodes) {
     const ref = node.tags?.[registerRefTag]?.trim();
     if (!ref) continue;
@@ -97,6 +102,7 @@ export const planDeleteAedChanges = async ({
       registerId: ref,
       node: deletionCandidateNode,
     });
+    deletedNodeIds.add(node.id);
 
     console.log(
       `${mode === "dry-run" ? "[dry] Would delete" : "Planned delete"} node ${node.id} (${ref})`,
@@ -104,4 +110,9 @@ export const planDeleteAedChanges = async ({
 
     summary.deleted++;
   }
+
+  pruneDeletedNodesFromElements({
+    elements: elementsForNearbyChecks,
+    deletedNodeIds,
+  });
 };

@@ -10,6 +10,7 @@ import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
 import type { DuplicateRefGroup } from "../../utils/filterDuplicates.ts";
 import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
+import { pruneDeletedNodesFromElements } from "../../utils/nearbyElements.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 
@@ -35,23 +36,6 @@ const createPlannedNode = (node: OverpassNode): PlannedNode => ({
   version: node.version,
   tags: { ...(node.tags ?? {}) },
 });
-
-const pruneDeletedNodesFromNearbyChecks = ({
-  elementsForNearbyChecks,
-  deletedNodeIds,
-}: {
-  elementsForNearbyChecks: OverpassElements[];
-  deletedNodeIds: Set<number>;
-}) => {
-  if (!deletedNodeIds.size) return;
-
-  for (let index = elementsForNearbyChecks.length - 1; index >= 0; index--) {
-    const element = elementsForNearbyChecks[index];
-    if (!element || element.type !== "node") continue;
-    if (!deletedNodeIds.has(element.id)) continue;
-    elementsForNearbyChecks.splice(index, 1);
-  }
-};
 
 const sortDuplicateNodes = ({
   nodes,
@@ -185,8 +169,8 @@ export const planResolveDuplicateAedChanges = async ({
     }
   }
 
-  pruneDeletedNodesFromNearbyChecks({
-    elementsForNearbyChecks,
+  pruneDeletedNodesFromElements({
+    elements: elementsForNearbyChecks,
     deletedNodeIds: deletedDuplicateNodeIds,
   });
 

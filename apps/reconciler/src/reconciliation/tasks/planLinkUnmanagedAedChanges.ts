@@ -6,6 +6,7 @@ import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
+import { buildNodeElementIndex } from "../../utils/nearbyElements.ts";
 import {
   applyTagUpdates,
   buildStandaloneStripTagUpdates,
@@ -34,18 +35,7 @@ interface LinkCandidate {
   distanceMeters: number;
 }
 
-const buildNodeElementIndex = (elements: OverpassElements[]) => {
-  const indexByNodeId = new Map<number, number>();
-
-  for (const [index, element] of elements.entries()) {
-    if (element.type !== "node") continue;
-    indexByNodeId.set(element.id, index);
-  }
-
-  return indexByNodeId;
-};
-
-const findClosestUnmatchedRegisterAed = ({
+const findUnmatchedRegisterAedsInRange = ({
   node,
   registerAedsById,
   matchedRegisterIds,
@@ -53,9 +43,8 @@ const findClosestUnmatchedRegisterAed = ({
   node: OverpassNode;
   registerAedsById: Map<string, RegisterAed>;
   matchedRegisterIds: Set<string>;
-}): { registerAed: RegisterAed; distanceMeters: number } | null => {
-  let closest: { registerAed: RegisterAed; distanceMeters: number } | null =
-    null;
+}): { registerAed: RegisterAed; distanceMeters: number }[] => {
+  const candidates: { registerAed: RegisterAed; distanceMeters: number }[] = [];
 
   for (const registerAed of registerAedsById.values()) {
     if (matchedRegisterIds.has(registerAed.ASSET_GUID)) continue;
@@ -69,12 +58,10 @@ const findClosestUnmatchedRegisterAed = ({
       continue;
     }
 
-    if (!closest || distanceMeters < closest.distanceMeters) {
-      closest = { registerAed, distanceMeters };
-    }
+    candidates.push({ registerAed, distanceMeters });
   }
 
-  return closest;
+  return candidates;
 };
 
 export const planLinkUnmanagedAedChanges = ({
@@ -92,19 +79,19 @@ export const planLinkUnmanagedAedChanges = ({
   const linkedUnmanagedNodeIds = new Set<number>();
 
   for (const node of unmanagedAedNodes) {
-    const closest = findClosestUnmatchedRegisterAed({
+    const candidates = findUnmatchedRegisterAedsInRange({
       node,
       registerAedsById,
       matchedRegisterIds,
     });
 
-    if (!closest) continue;
-
-    linkCandidates.push({
-      node,
-      registerAed: closest.registerAed,
-      distanceMeters: closest.distanceMeters,
-    });
+    for (const candidate of candidates) {
+      linkCandidates.push({
+        node,
+        registerAed: candidate.registerAed,
+        distanceMeters: candidate.distanceMeters,
+      });
+    }
   }
 
   linkCandidates.sort(

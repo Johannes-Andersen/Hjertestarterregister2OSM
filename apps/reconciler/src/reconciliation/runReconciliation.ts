@@ -5,6 +5,7 @@ import type {
   SyncRunMode,
 } from "@repo/sync-store";
 import { registerClient } from "../clients/registerClient.ts";
+import { reconcilerConfig } from "../config.ts";
 import {
   createReconciliationChangePlan,
   type ReconciliationChangePlan,
@@ -94,12 +95,13 @@ export const runReconciliation = async ({
     mode,
     managedAedNodes: deduplicatedManagedNodes,
     registerAedsById,
+    elementsForNearbyChecks,
     changePlan,
     summary,
     issues,
   });
 
-  planUpdateAedChanges({
+  await planUpdateAedChanges({
     mode,
     managedAedNodes: deduplicatedManagedNodes,
     registerAedsById,
@@ -135,6 +137,18 @@ export const runReconciliation = async ({
     summary,
     issues,
   });
+
+  // Mass deletion safeguard: abort if too many nodes would be deleted
+  if (changePlan.delete.length > 0 && aedNodeCount > 0) {
+    const deleteFraction = changePlan.delete.length / aedNodeCount;
+    if (deleteFraction > reconcilerConfig.maxDeleteFraction) {
+      throw new Error(
+        `Aborting: planned ${changePlan.delete.length} deletions out of ${aedNodeCount} OSM AED nodes ` +
+          `(${(deleteFraction * 100).toFixed(1)}%) exceeds the safety threshold of ` +
+          `${(reconcilerConfig.maxDeleteFraction * 100).toFixed(0)}%.`,
+      );
+    }
+  }
 
   metrics.linkedAeds = matchedRegisterIds.size;
   metrics.updated = summary.updated;
