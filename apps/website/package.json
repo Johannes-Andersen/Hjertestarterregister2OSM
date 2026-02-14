@@ -1,0 +1,25 @@
+{
+  "name": "website",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "astro": "astro",
+    "check-types": "astro check",
+    "preview": "astro build && wrangler dev",
+    "deploy": "astro build && wrangler deploy",
+    "gen-types": "wrangler types"
+  },
+  "dependencies": {
+    "@repo/sync-store": "workspace:*",
+    "@astrojs/cloudflare": "12.6.12",
+    "astro": "5.17.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.6",
+    "@types/node": "25.2.3",
+    "typescript": "5.9.3",
+    "wrangler": "4.65.0"
+  }
+}

@@ -1,0 +1,48 @@
+---
+import { SyncStoreClient } from "@repo/sync-store";
+import IssueTypeCountList from "../components/issues/IssueTypeCountList.astro";
+import OverviewHero from "../components/overview/OverviewHero.astro";
+import OverviewStatsGrid from "../components/overview/OverviewStatsGrid.astro";
+import RunsTable from "../components/runs/RunsTable.astro";
+import Panel from "../components/ui/Panel.astro";
+import Layout from "../layouts/Layout.astro";
+
+export const prerender = false;
+
+const syncStore = new SyncStoreClient({
+  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  ssl: import.meta.env.DEV ? "require" : false,
+});
+
+const [overview, recentRuns, openIssueTypeCounts] = await Promise.all([
+  syncStore.getOverviewStats(),
+  syncStore.listRecentRuns(6),
+  syncStore.listIssueTypeCounts(),
+]);
+
+const baselineRun = overview.latestSuccessfulRun ?? overview.latestRun;
+---
+
+<Layout title="Sync Overview | Hjertestarterregister2OSM">
+  <OverviewHero latestSuccessfulRun={overview.latestSuccessfulRun} />
+  <OverviewStatsGrid
+    baselineRun={baselineRun}
+    openIssueCount={overview.openIssueCount}
+  />
+
+  <Panel>
+    <Fragment slot="header">
+      <h3>Recent runs</h3>
+      <a href="/runs">See all</a>
+    </Fragment>
+    <RunsTable runs={recentRuns} emptyText="No runs recorded yet." />
+  </Panel>
+
+  <Panel>
+    <Fragment slot="header">
+      <h3>Current issue types</h3>
+      <a href="/issues">View issues</a>
+    </Fragment>
+    <IssueTypeCountList counts={openIssueTypeCounts} />
+  </Panel>
+</Layout>

@@ -1,0 +1,38 @@
+---
+import type { SyncRunStatus } from "@repo/sync-store";
+
+interface Props {
+  status: SyncRunStatus;
+}
+
+const { status } = Astro.props;
+---
+
+<span class:list={["pill", status]}>{status}</span>
+
+<style>
+  .pill {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .pill.success {
+    background: #d7f2e8;
+    color: #126d53;
+  }
+
+  .pill.failed {
+    background: #fbe2df;
+    color: var(--error);
+  }
+
+  .pill.running {
+    background: #fdefd9;
+    color: var(--warning);
+  }
+</style>

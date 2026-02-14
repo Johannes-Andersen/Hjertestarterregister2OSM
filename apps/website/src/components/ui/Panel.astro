@@ -1,0 +1,62 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<section class:list={["panel", className]}>
+  {
+    Astro.slots.has("header") ? (
+      <header class="panel-header">
+        <slot name="header" />
+      </header>
+    ) : null
+  }
+  <div class="panel-body">
+    <slot />
+  </div>
+</section>
+
+<style>
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .panel-header :global(h2),
+  .panel-header :global(h3),
+  .panel-header :global(p) {
+    margin: 0;
+  }
+
+  .panel-header :global(.eyebrow) {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
+  }
+
+  .panel-body {
+    min-width: 0;
+  }
+
+  @media (max-width: 620px) {
+    .panel-header {
+      flex-direction: column;
+      align-items: start;
+    }
+  }
+</style>

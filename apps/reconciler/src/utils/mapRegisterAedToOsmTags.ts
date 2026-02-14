@@ -1,0 +1,180 @@
+import type { AedTags } from "../types/aedTags.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
+
+/** OSM enforces a 255 unicode character limit on tag values */
+const OSM_MAX_TAG_VALUE_LENGTH = 255;
+
+/**
+ * Check if a tag value exceeds OSM's limit and return null if so.
+ * Logs a warning when skipping oversized values.
+ */
+const validateTagValue = (
+  value: string,
+  tagName: string,
+  aedGuid: string,
+): string | null => {
+  if (value.length <= OSM_MAX_TAG_VALUE_LENGTH) return value;
+
+  console.warn(
+    `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${value.length} chars)`,
+  );
+  return null;
+};
+
+type DayRange = { day: string; from?: number; to?: number };
+
+const dayRangesFromRegister = (aed: RegisterAed): DayRange[] => [
+  {
+    day: "Mo",
+    from: aed.OPENING_HOURS_MON_FROM,
+    to: aed.OPENING_HOURS_MON_TO,
+  },
+  {
+    day: "Tu",
+    from: aed.OPENING_HOURS_TUE_FROM,
+    to: aed.OPENING_HOURS_TUE_TO,
+  },
+  {
+    day: "We",
+    from: aed.OPENING_HOURS_WED_FROM,
+    to: aed.OPENING_HOURS_WED_TO,
+  },
+  {
+    day: "Th",
+    from: aed.OPENING_HOURS_THU_FROM,
+    to: aed.OPENING_HOURS_THU_TO,
+  },
+  {
+    day: "Fr",
+    from: aed.OPENING_HOURS_FRI_FROM,
+    to: aed.OPENING_HOURS_FRI_TO,
+  },
+  {
+    day: "Sa",
+    from: aed.OPENING_HOURS_SAT_FROM,
+    to: aed.OPENING_HOURS_SAT_TO,
+  },
+  {
+    day: "Su",
+    from: aed.OPENING_HOURS_SUN_FROM,
+    to: aed.OPENING_HOURS_SUN_TO,
+  },
+];
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+const formatRegisterTime = (value: number | undefined): string | null => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+
+  const normalized = Math.trunc(value);
+  if (normalized < 0 || normalized > 2400) return null;
+
+  const hour = Math.floor(normalized / 100);
+  const minute = normalized % 100;
+
+  if (hour > 24) return null;
+  if (minute >= 60) return null;
+  if (hour === 24 && minute !== 0) return null;
+
+  return `${pad2(hour)}:${pad2(minute)}`;
+};
+
+const buildOpeningHours = (aed: RegisterAed): string | null => {
+  const entries = dayRangesFromRegister(aed)
+    .map(({ day, from, to }, index) => {
+      const fromTime = formatRegisterTime(from);
+      const toTime = formatRegisterTime(to);
+      if (!fromTime || !toTime) return null;
+
+      return { day, interval: `${fromTime}-${toTime}`, index };
+    })
+    .filter(
+      (entry): entry is { day: string; interval: string; index: number } =>
+        !!entry,
+    );
+
+  if (!entries.length) return null;
+
+  const grouped: Array<{
+    fromDay: string;
+    toDay: string;
+    interval: string;
+    toIndex: number;
+  }> = [];
+  for (const entry of entries) {
+    const lastGroup = grouped[grouped.length - 1];
+    if (
+      lastGroup &&
+      lastGroup.interval === entry.interval &&
+      lastGroup.toIndex + 1 === entry.index
+    ) {
+      lastGroup.toDay = entry.day;
+      lastGroup.toIndex = entry.index;
+      continue;
+    }
+
+    grouped.push({
+      fromDay: entry.day,
+      toDay: entry.day,
+      interval: entry.interval,
+      toIndex: entry.index,
+    });
+  }
+
+  const parts = grouped.map(({ fromDay, toDay, interval }) => {
+    const days = fromDay === toDay ? fromDay : `${fromDay}-${toDay}`;
+    return `${days} ${interval}`;
+  });
+
+  if (aed.OPENING_HOURS_CLOSED_HOLIDAYS === "Y") parts.push("PH off");
+  if (aed.OPENING_HOURS_CLOSED_HOLIDAYS === "N") parts.push("PH open");
+
+  return parts.join("; ");
+};
+
+export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
+  const tags: AedTags = {
+    emergency: "defibrillator",
+    "emergency:phone": "113",
+    "ref:hjertestarterregister": aed.ASSET_GUID,
+  };
+
+  const name = typeof aed.SITE_NAME === "string" ? aed.SITE_NAME.trim() : "";
+  if (name) {
+    const validName = validateTagValue(name, "name", aed.ASSET_GUID);
+    if (validName) tags.name = validName;
+  }
+
+  if (
+    typeof aed.SITE_FLOOR_NUMBER === "number" &&
+    Number.isFinite(aed.SITE_FLOOR_NUMBER)
+  ) {
+    tags.level = String(aed.SITE_FLOOR_NUMBER);
+  }
+
+  const location =
+    typeof aed.SITE_DESCRIPTION === "string" ? aed.SITE_DESCRIPTION.trim() : "";
+  if (location) {
+    const validLocation = validateTagValue(
+      location,
+      "defibrillator:location",
+      aed.ASSET_GUID,
+    );
+    if (validLocation) tags["defibrillator:location"] = validLocation;
+  }
+
+  const model =
+    typeof aed.ASSET_TYPE_NAME === "string" ? aed.ASSET_TYPE_NAME.trim() : "";
+  if (model) tags.model = model;
+
+  const manufacturer =
+    typeof aed.MANUFACTURER_NAME === "string"
+      ? aed.MANUFACTURER_NAME.trim()
+      : "";
+  if (manufacturer) tags.manufacturer = manufacturer;
+
+  const openingHours = buildOpeningHours(aed);
+  if (openingHours) tags.opening_hours = openingHours;
+
+  return tags;
+};

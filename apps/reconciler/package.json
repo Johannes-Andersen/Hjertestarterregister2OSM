@@ -1,0 +1,18 @@
+{
+  "name": "reconciler",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/node": "25.2.3",
+    "@repo/hjertestarterregister-sdk": "workspace:*",
+    "@repo/overpass-sdk": "workspace:*",
+    "@repo/osm-sdk": "workspace:*",
+    "@repo/sync-store": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "zod": "4.3.6"
+  }
+}

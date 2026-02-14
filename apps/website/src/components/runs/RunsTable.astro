@@ -1,0 +1,93 @@
+---
+import type { SyncRunListItem } from "@repo/sync-store";
+import { formatDateTime } from "../../utils/formatDateTime";
+import { formatDuration } from "../../utils/formatDuration";
+import { formatNumber } from "../../utils/formatNumber";
+import StatusPill from "../ui/StatusPill.astro";
+
+interface Props {
+  runs: SyncRunListItem[];
+  includeSkippedColumns?: boolean;
+  emptyText?: string;
+}
+
+const {
+  runs,
+  includeSkippedColumns = false,
+  emptyText = "No runs found.",
+} = Astro.props;
+---
+
+{
+  runs.length ? (
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Started</th>
+            <th>Status</th>
+            <th>Mode</th>
+            <th>Duration</th>
+            <th>Updated</th>
+            <th>Created</th>
+            <th>Deleted</th>
+            {includeSkippedColumns ? <th>Skipped nearby</th> : null}
+            {includeSkippedColumns ? <th>Skipped delete</th> : null}
+            <th>Unchanged</th>
+          </tr>
+        </thead>
+        <tbody>
+          {runs.map((run) => (
+            <tr>
+              <td>
+                <a href={`/runs/${run.id}`}>{formatDateTime(run.startedAt)}</a>
+              </td>
+              <td>
+                <StatusPill status={run.status} />
+              </td>
+              <td>{run.mode}</td>
+              <td>{formatDuration(run.startedAt, run.finishedAt)}</td>
+              <td>{formatNumber(run.updated)}</td>
+              <td>{formatNumber(run.created)}</td>
+              <td>{formatNumber(run.deleted)}</td>
+              {includeSkippedColumns ? (
+                <td>{formatNumber(run.skippedCreateNearby)}</td>
+              ) : null}
+              {includeSkippedColumns ? (
+                <td>{formatNumber(run.skippedDeleteNotAedOnly)}</td>
+              ) : null}
+              <td>{formatNumber(run.unchanged)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <p class="empty">{emptyText}</p>
+  )
+}
+
+<style>
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem;
+    border-bottom: 1px solid #dbe3df;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .empty {
+    margin: 0.4rem 0;
+    color: var(--ink-subtle);
+  }
+</style>

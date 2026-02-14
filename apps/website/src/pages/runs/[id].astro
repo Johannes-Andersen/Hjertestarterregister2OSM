@@ -1,0 +1,67 @@
+---
+import { SyncStoreClient } from "@repo/sync-store";
+import RunIssuesTable from "../../components/runs/RunIssuesTable.astro";
+import RunOutcomes from "../../components/runs/RunOutcomes.astro";
+import RunSummaryGrid from "../../components/runs/RunSummaryGrid.astro";
+import Panel from "../../components/ui/Panel.astro";
+import Layout from "../../layouts/Layout.astro";
+
+export const prerender = false;
+
+const runId = Astro.params.id;
+
+if (!runId) {
+  Astro.response.status = 400;
+}
+
+const syncStore = new SyncStoreClient({
+  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  ssl: import.meta.env.DEV ? "require" : false,
+});
+
+const [run, issues] = runId
+  ? await Promise.all([
+      syncStore.getRunById(runId),
+      syncStore.listRunIssues({ runId }),
+    ])
+  : [null, []];
+
+if (!run) {
+  Astro.response.status = 404;
+}
+---
+
+<Layout title={`Run ${runId ?? "unknown"} | Hjertestarterregister2OSM`}>
+  {
+    run ? (
+      <>
+        <RunSummaryGrid run={run} />
+
+        <Panel>
+          <h3 class="section-title">Outcomes</h3>
+          <RunOutcomes run={run} />
+        </Panel>
+
+        <Panel>
+          <Fragment slot="header">
+            <h3>Issues in this run</h3>
+            <a href="/issues">Current issue dashboard</a>
+          </Fragment>
+          <RunIssuesTable issues={issues} />
+        </Panel>
+      </>
+    ) : (
+      <Panel>
+        <h2>Run not found</h2>
+        <p>The requested run ID does not exist.</p>
+      </Panel>
+    )
+  }
+</Layout>
+
+<style>
+  .section-title {
+    margin-top: 0;
+    margin-bottom: 0.7rem;
+  }
+</style>

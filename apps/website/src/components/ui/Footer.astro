@@ -1,0 +1,65 @@
+<footer class="site-footer">
+  <section class="site-footer-panel" role="note">
+    <p>
+      This is not an official service provided by any government or
+      organization, nor is in any way endorsed by OpenSteetMap nor the Norwegian
+      authorities. It is built and maintained by volunteers in their spare time,
+      and relies on the open data provided by 113's Hjertestarterregister.
+    </p>
+    <p>
+      If you find issues in the underlying data (location, description, opening
+      hours, or outdated information), contact
+      <a href="mailto:hjertestarterregister@ous-hf.no">
+        hjertestarterregister@ous-hf.no
+      </a>.
+    </p>
+    <p>
+      To add a new AED to the registry, use
+      <a
+        href="https://hjertestarterregister.113.no/"
+        target="_blank"
+        rel="noreferrer">hjertestarterregister.113.no</a
+      >.
+    </p>
+    <p>
+      Website source code:
+      <a
+        href="https://github.com/Johannes-Andersen/Hjertestarterregister2OSM"
+        target="_blank"
+        rel="noreferrer"
+        >github.com/Johannes-Andersen/Hjertestarterregister2OSM</a
+      >.
+    </p>
+  </section>
+</footer>
+
+<style>
+  .site-footer {
+    padding: 0 0 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .site-footer-panel {
+    margin: 0 clamp(1rem, 3vw, 3rem);
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--ink);
+    font-size: 0.93rem;
+  }
+
+  .site-footer-panel p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .site-footer-panel p + p {
+    margin-top: 0.4rem;
+  }
+
+  .site-footer-panel a {
+    color: var(--accent);
+  }
+</style>

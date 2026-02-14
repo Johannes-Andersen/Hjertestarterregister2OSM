@@ -1,0 +1,123 @@
+---
+import type { SyncRunIssueListItem } from "@repo/sync-store";
+import { issueTypeLabels } from "../../utils/constants";
+import { formatDateTime } from "../../utils/formatDateTime";
+
+interface Props {
+  issues: SyncRunIssueListItem[];
+  emptyText?: string;
+}
+
+const { issues, emptyText = "No current issues." } = Astro.props;
+---
+
+{
+  issues.length ? (
+    <div class="issues-grid">
+      {issues.map((issue) => (
+        <article class:list={["issue-card", issue.severity]}>
+          <div class="top-row">
+            <span class="type">
+              {issueTypeLabels[issue.issueType] ?? issue.issueType}
+            </span>
+            <span class="severity">{issue.severity}</span>
+          </div>
+          <p class="message">{issue.message}</p>
+          <ul>
+            <li>
+              <strong>Run:</strong> <a href={`/runs/${issue.runId}`}>
+                {issue.runId.slice(0, 8)}...
+              </a>
+            </li>
+            <li><strong>Created:</strong> {formatDateTime(issue.createdAt)}</li>
+            <li><strong>Register ref:</strong> {issue.registerRef ?? "-"}</li>
+            <li>
+              <strong>OSM node:</strong>
+              {issue.osmNodeId ? (
+                <a
+                  href={`https://www.openstreetmap.org/node/${issue.osmNodeId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {issue.osmNodeId}
+                </a>
+              ) : (
+                " -"
+              )}
+            </li>
+          </ul>
+        </article>
+      ))}
+    </div>
+  ) : (
+    <p class="empty">{emptyText}</p>
+  )
+}
+
+<style>
+  .issues-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .issue-card {
+    border: 1px solid #dbe3df;
+    border-radius: 0.9rem;
+    padding: 0.8rem;
+    background: #fff;
+  }
+
+  .issue-card.warning {
+    box-shadow: inset 4px 0 0 #c05e1d;
+  }
+
+  .issue-card.error {
+    box-shadow: inset 4px 0 0 #b42318;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .type {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .severity {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.07em;
+    color: var(--ink-subtle);
+  }
+
+  .message {
+    margin: 0.3rem 0 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .issue-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.87rem;
+    color: var(--ink-subtle);
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 960px) {
+    .issues-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,75 @@
+---
+import type { SyncIssueTypeCount } from "@repo/sync-store";
+import { issueTypeLabels } from "../../utils/constants";
+import { formatNumber } from "../../utils/formatNumber";
+
+type LayoutVariant = "stack" | "grid";
+
+interface Props {
+  counts: SyncIssueTypeCount[];
+  emptyText?: string;
+  layout?: LayoutVariant;
+}
+
+const {
+  counts,
+  emptyText = "No current issues.",
+  layout = "stack",
+} = Astro.props;
+---
+
+{
+  counts.length ? (
+    <ul class:list={["issue-type-count-list", layout]}>
+      {counts.map((entry) => (
+        <li>
+          <span>{issueTypeLabels[entry.issueType] ?? entry.issueType}</span>
+          <strong>{formatNumber(entry.count)}</strong>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="empty">{emptyText}</p>
+  )
+}
+
+<style>
+  .issue-type-count-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .issue-type-count-list.grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .issue-type-count-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border: 1px solid #dbe3df;
+    border-radius: 0.7rem;
+    padding: 0.6rem;
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 960px) {
+    .issue-type-count-list.grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 620px) {
+    .issue-type-count-list.grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

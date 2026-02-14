@@ -1,0 +1,86 @@
+---
+const navItems = [
+  { href: "/", label: "Overview" },
+  { href: "/runs", label: "Runs" },
+  { href: "/issues", label: "Issues" },
+];
+
+const isActivePath = (href: string) =>
+  Astro.url.pathname === href ||
+  (href !== "/" && Astro.url.pathname.startsWith(`${href}/`));
+---
+
+<header class="site-header">
+  <a class="brand" href="/">
+    <h1>Hjertestarterregister -> OSM</h1>
+  </a>
+  <nav>
+    <ul>
+      {
+        navItems.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class={isActivePath(item.href) ? "active" : undefined}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .site-header {
+    padding: 1.5rem clamp(1rem, 3vw, 3rem);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand {
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  .brand h1 {
+    margin: 0.2rem 0 0;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 700;
+  }
+
+  nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.7rem;
+  }
+
+  nav a {
+    display: inline-flex;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    color: var(--ink-subtle);
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    border-color: var(--line);
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  nav a.active {
+    color: var(--ink);
+    border-color: #9bc9bb;
+    background: var(--accent-soft);
+  }
+</style>

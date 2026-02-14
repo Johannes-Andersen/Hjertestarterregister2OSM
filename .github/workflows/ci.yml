@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: 10.29.3
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@29711cbb52afee00eb13aeb30636592f9edc0088 # v2
+
+      - name: Run Biome lint
+        run: biome lint .
+
+      - name: Run Biome format check
+        run: biome format .
+
+      - name: Run Biome check
+        run: biome check .
+
+      - name: Run type check
+        run: pnpm check-types
+
+      - name: Run build
+        run: pnpm build

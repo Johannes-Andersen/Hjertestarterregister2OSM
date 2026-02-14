@@ -1,0 +1,75 @@
+---
+import type { SyncRunRecord } from "@repo/sync-store";
+import { formatNumber } from "../../utils/formatNumber";
+
+interface Props {
+  run: SyncRunRecord;
+}
+
+const { run } = Astro.props;
+---
+
+<dl>
+  <div>
+    <dt>Updated</dt>
+    <dd>{formatNumber(run.updated)}</dd>
+  </div>
+  <div>
+    <dt>Created</dt>
+    <dd>{formatNumber(run.created)}</dd>
+  </div>
+  <div>
+    <dt>Deleted</dt>
+    <dd>{formatNumber(run.deleted)}</dd>
+  </div>
+  <div>
+    <dt>Skipped create nearby</dt>
+    <dd>{formatNumber(run.skippedCreateNearby)}</dd>
+  </div>
+  <div>
+    <dt>Skipped delete non-AED</dt>
+    <dd>{formatNumber(run.skippedDeleteNotAedOnly)}</dd>
+  </div>
+  <div>
+    <dt>Unchanged</dt>
+    <dd>{formatNumber(run.unchanged)}</dd>
+  </div>
+</dl>
+
+<style>
+  dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin: 0;
+  }
+
+  dl div {
+    border: 1px solid #dbe3df;
+    border-radius: 0.7rem;
+    padding: 0.7rem;
+  }
+
+  dt {
+    color: var(--ink-subtle);
+    font-size: 0.84rem;
+  }
+
+  dd {
+    margin: 0.3rem 0 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  @media (max-width: 980px) {
+    dl {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 620px) {
+    dl {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

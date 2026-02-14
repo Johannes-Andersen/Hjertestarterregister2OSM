@@ -1,0 +1,77 @@
+---
+import type { SyncRunIssueListItem } from "@repo/sync-store";
+import { issueTypeLabels } from "../../utils/constants";
+
+interface Props {
+  issues: SyncRunIssueListItem[];
+  emptyText?: string;
+}
+
+const { issues, emptyText = "No issues were recorded for this run." } = Astro.props;
+---
+
+{
+  issues.length ? (
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Severity</th>
+            <th>Message</th>
+            <th>OSM</th>
+          </tr>
+        </thead>
+        <tbody>
+          {issues.map((issue) => (
+            <tr>
+              <td>{issueTypeLabels[issue.issueType] ?? issue.issueType}</td>
+              <td>{issue.severity}</td>
+              <td>{issue.message}</td>
+              <td>
+                {issue.osmNodeId ? (
+                  <a
+                    href={`https://www.openstreetmap.org/node/${issue.osmNodeId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Node {issue.osmNodeId}
+                  </a>
+                ) : (
+                  "-"
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <p class="empty">{emptyText}</p>
+  )
+}
+
+<style>
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    border-bottom: 1px solid #dbe3df;
+    padding: 0.6rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--ink-subtle);
+  }
+</style>

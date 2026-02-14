@@ -1,0 +1,33 @@
+---
+import { SyncStoreClient } from "@repo/sync-store";
+import RunsTable from "../../components/runs/RunsTable.astro";
+import Panel from "../../components/ui/Panel.astro";
+import Layout from "../../layouts/Layout.astro";
+import { formatNumber } from "../../utils/formatNumber";
+
+export const prerender = false;
+
+const syncStore = new SyncStoreClient({
+  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  ssl: import.meta.env.DEV ? "require" : false,
+});
+
+const runs = await syncStore.listRecentRuns(200);
+---
+
+<Layout title="Run Log | Hjertestarterregister2OSM">
+  <Panel>
+    <Fragment slot="header">
+      <div>
+        <p class="eyebrow">Reconciliation History</p>
+        <h2>Recent sync runs</h2>
+      </div>
+      <span>{formatNumber(runs.length)} shown</span>
+    </Fragment>
+    <RunsTable
+      runs={runs}
+      includeSkippedColumns={true}
+      emptyText="No runs found."
+    />
+  </Panel>
+</Layout>
