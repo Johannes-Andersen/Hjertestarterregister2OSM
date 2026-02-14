@@ -1,25 +1,23 @@
-import {
-  HjertestarterregisterApiClient,
-  type RegistryAsset,
-} from "@repo/hjertestarterregister-sdk";
-import { OsmApiClient } from "@repo/osm-sdk";
+import type { RegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
-import {
-  type NewSyncIssue,
-  type SyncRunMetrics,
-  type SyncRunMode,
-  SyncStoreClient,
+import type {
+  NewSyncIssue,
+  SyncRunMetrics,
+  SyncRunMode,
 } from "@repo/sync-store";
+import { osmClient } from "./clients/osmClient.ts";
+import { registerClient } from "./clients/registerClient.ts";
+import { syncStore } from "./clients/syncStore.ts";
 import { changesetConfig, reconcilerConfig } from "./config.ts";
 import { createChangePlan, hasPlannedChanges } from "./dryRun/changePlan.ts";
 import { writeDryRunChangeFiles } from "./dryRun/writeChangeFiles.ts";
-import { getOsmAeds } from "./overpass/getOsmAeds.ts";
-import type { RegisterAed } from "./register/type.ts";
 import { addAeds } from "./tasks/addAeds.ts";
 import { deleteAeds } from "./tasks/deleteAeds.ts";
-import { createReconciliationSummary } from "./tasks/types.ts";
 import { updateAeds } from "./tasks/updateAeds.ts";
+import type { RegisterAed } from "./types/registerAed.ts";
+import { createReconciliationSummary } from "./utils/createReconciliationSummary.ts";
 import { filterDuplicates } from "./utils/filterDuplicates.ts";
+import { getOsmAeds } from "./utils/getOsmAeds.ts";
 import { isManagedAed } from "./utils/isManagedAed.ts";
 import { isOverpassNode } from "./utils/isOverpassNode.ts";
 
@@ -158,17 +156,6 @@ const toErrorMessage = (error: unknown): string => {
   return "Unknown reconciler error";
 };
 
-const osmClient = new OsmApiClient({
-  apiUrl: process.env.OSM_API_URL,
-  bearerToken: process.env.OSM_AUTH_TOKEN,
-  changesetTags: changesetConfig.commonTags,
-  userAgent: "hjertestarterregister2osm/0.1",
-});
-
-const syncStore = new SyncStoreClient({
-  connectionString: process.env.DATABASE_URL ?? "",
-});
-
 const main = async () => {
   const mode: SyncRunMode = reconcilerConfig.dryRun ? "dry-run" : "live";
   const run = await syncStore.startRun({ mode });
@@ -187,12 +174,6 @@ const main = async () => {
 
     const elementsForNearbyChecks = [...elements];
 
-    const registerClient = new HjertestarterregisterApiClient({
-      clientId: process.env.HJERTESTARTERREGISTER_CLIENT_ID || "",
-      clientSecret: process.env.HJERTESTARTERREGISTER_CLIENT_SECRET || "",
-      baseUrl: process.env.HJERTESTARTERREGISTER_API_BASE_URL,
-      oauthTokenUrl: process.env.HJERTESTARTERREGISTER_OAUTH_TOKEN_URL,
-    });
     const registerResponse = await registerClient.searchAssets({
       max_rows: defaultRegisterMaxRows,
     });

@@ -1,6 +1,6 @@
 import type { OverpassNode } from "@repo/overpass-sdk";
-import type { RegisterAed } from "../register/type.ts";
 import type { AedTags } from "../types/aedTags.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
 import { coordinateDistance } from "./coordinateDistance.ts";
 
 interface Arguments {

@@ -1,5 +1,5 @@
-import type { RegisterAed } from "../register/type.ts";
 import type { AedTags } from "../types/aedTags.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
 
 /** OSM enforces a 255 unicode character limit on tag values */
 const OSM_MAX_TAG_VALUE_LENGTH = 255;

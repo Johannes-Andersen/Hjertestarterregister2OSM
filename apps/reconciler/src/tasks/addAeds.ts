@@ -2,10 +2,10 @@ import type { OverpassElements } from "@repo/overpass-sdk";
 import type { NewSyncIssue } from "@repo/sync-store";
 import { reconcilerConfig } from "../config.ts";
 import type { ChangePlan } from "../dryRun/changePlan.ts";
-import type { RegisterAed } from "../register/type.ts";
+import type { ReconciliationSummary } from "../types/reconciliationSummary.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
 import { findNearbyAed } from "../utils/findNearbyAed.ts";
 import { mapRegisterAedToOsmTags } from "../utils/mapRegisterAedToOsmTags.ts";
-import type { ReconciliationSummary } from "./types.ts";
 
 interface Arguments {
   registerAedsById: Map<string, RegisterAed>;

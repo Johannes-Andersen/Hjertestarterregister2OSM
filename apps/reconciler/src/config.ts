@@ -4,7 +4,7 @@ const currentDir = import.meta.dirname;
 const outputDir = `${currentDir}/../out`;
 
 export const overpassConfig = {
-  apiUrl: process.env.OVERPASS_API_URL,
+  apiUrl: "https://overpass-api.de/api/interpreter",
   queryTimeoutSeconds: 60,
   minRetryDelayMs: 5_000, // 5 seconds
   maxRetries: 6,

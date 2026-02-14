@@ -1,10 +1,10 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
 import { reconcilerConfig } from "../config.ts";
 import type { ChangePlan } from "../dryRun/changePlan.ts";
-import type { RegisterAed } from "../register/type.ts";
+import type { ReconciliationSummary } from "../types/reconciliationSummary.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
 import { hasAedChanged } from "../utils/hasAedChanged.ts";
 import { mapRegisterAedToOsmTags } from "../utils/mapRegisterAedToOsmTags.ts";
-import type { ReconciliationSummary } from "./types.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 

@@ -1,11 +1,11 @@
-import { OsmApiClient } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue } from "@repo/sync-store";
-import { changesetConfig, reconcilerConfig } from "../config.ts";
+import { osmClient } from "../clients/osmClient.ts";
+import { reconcilerConfig } from "../config.ts";
 import type { ChangePlan, PlannedNode } from "../dryRun/changePlan.ts";
-import type { RegisterAed } from "../register/type.ts";
+import type { ReconciliationSummary } from "../types/reconciliationSummary.ts";
+import type { RegisterAed } from "../types/registerAed.ts";
 import { isAedOnlyNode } from "../utils/isAedOnlyNode.ts";
-import type { ReconciliationSummary } from "./types.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 
@@ -16,13 +16,6 @@ interface Arguments {
   summary: ReconciliationSummary;
   issues: NewSyncIssue[];
 }
-
-const osmClient = new OsmApiClient({
-  apiUrl: process.env.OSM_API_URL,
-  bearerToken: process.env.OSM_AUTH_TOKEN,
-  changesetTags: changesetConfig.commonTags,
-  userAgent: "hjertestarterregister2osm/0.1",
-});
 
 export const deleteAeds = async ({
   filteredAedNodes,
