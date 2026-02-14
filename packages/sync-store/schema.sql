@@ -7,8 +7,6 @@ CREATE TABLE sync_runs (
   error_message TEXT,
   registry_aeds_count INTEGER NOT NULL DEFAULT 0,
   osm_aeds_count INTEGER NOT NULL DEFAULT 0,
-  managed_osm_aeds_count INTEGER NOT NULL DEFAULT 0,
-  unique_managed_osm_aeds_count INTEGER NOT NULL DEFAULT 0,
   linked_aeds_count INTEGER NOT NULL DEFAULT 0,
   updated_count INTEGER NOT NULL DEFAULT 0,
   created_count INTEGER NOT NULL DEFAULT 0,

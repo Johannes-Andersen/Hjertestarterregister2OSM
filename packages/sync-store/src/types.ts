@@ -12,32 +12,16 @@ export type SyncIssueType =
   | "skipped_delete_not_aed_only"
   | "orphan_osm_register_ref";
 
-export interface SyncRunCounters {
+export interface SyncRunMetrics {
+  registryAeds: number;
+  osmAeds: number;
+  linkedAeds: number;
   updated: number;
   created: number;
   deleted: number;
   skippedCreateNearby: number;
   skippedDeleteNotAedOnly: number;
   unchanged: number;
-}
-
-export interface SyncRunMetrics extends SyncRunCounters {
-  registryAeds: number;
-  osmAeds: number;
-  managedOsmAeds: number;
-  uniqueManagedOsmAeds: number;
-  linkedAeds: number;
-}
-
-export interface SyncRunRecord extends SyncRunMetrics {
-  id: string;
-  startedAt: Date;
-  finishedAt: Date | null;
-  status: SyncRunStatus;
-  mode: SyncRunMode;
-  errorMessage: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface NewSyncIssue {
@@ -49,27 +33,9 @@ export interface NewSyncIssue {
   details?: Record<string, unknown>;
 }
 
-export interface SyncRunIssueRecord {
-  id: string;
-  runId: string;
-  issueType: SyncIssueType;
-  severity: SyncIssueSeverity;
-  message: string;
-  registerRef: string | null;
-  osmNodeId: number | null;
-  details: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface SyncOverviewStats {
-  latestRun: SyncRunRecord | null;
-  latestSuccessfulRun: SyncRunRecord | null;
-  openIssueCount: number;
-  totalIssueCount: number;
-}
-
-export interface SyncIssueTypeCount {
-  issueType: SyncIssueType;
-  count: number;
+export interface SyncStoreClientOptions {
+  connectionString: string;
+  maxConnections?: number;
+  connectTimeoutSeconds?: number;
+  idleTimeoutSeconds?: number;
 }

@@ -21,14 +21,6 @@ export interface SyncRunCounters {
   unchanged: number;
 }
 
-export interface SyncRunMetrics extends SyncRunCounters {
-  registryAeds: number;
-  osmAeds: number;
-  managedOsmAeds: number;
-  uniqueManagedOsmAeds: number;
-  linkedAeds: number;
-}
-
 // Full record - used only for single run detail page
 export interface SyncRunRecord extends SyncRunCounters {
   id: string;

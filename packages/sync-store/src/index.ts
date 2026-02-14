@@ -1,26 +1,12 @@
-export {
-  closeSyncStore,
-  completeSyncRun,
-  getSyncOverviewStats,
-  getSyncRunById,
-  getSyncStoreSql,
-  listIssueTypeCounts,
-  listRecentSyncRuns,
-  listSyncRunIssues,
-  replaceCurrentRunIssues,
-  startSyncRun,
-} from "./client.ts";
+export { SyncStoreClient } from "./client.ts";
+export { SyncStoreError } from "./errors.ts";
 
 export type {
   NewSyncIssue,
   SyncIssueSeverity,
   SyncIssueType,
-  SyncIssueTypeCount,
-  SyncOverviewStats,
-  SyncRunCounters,
-  SyncRunIssueRecord,
   SyncRunMetrics,
   SyncRunMode,
-  SyncRunRecord,
   SyncRunStatus,
+  SyncStoreClientOptions,
 } from "./types.ts";

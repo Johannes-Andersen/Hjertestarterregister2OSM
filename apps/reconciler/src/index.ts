@@ -5,13 +5,10 @@ import {
 import { OsmApiClient } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import {
-  closeSyncStore,
-  completeSyncRun,
   type NewSyncIssue,
-  replaceCurrentRunIssues,
   type SyncRunMetrics,
   type SyncRunMode,
-  startSyncRun,
+  SyncStoreClient,
 } from "@repo/sync-store";
 import { changesetConfig, reconcilerConfig } from "./config.ts";
 import { createChangePlan, hasPlannedChanges } from "./dryRun/changePlan.ts";
@@ -53,10 +50,7 @@ const mapRegistryAssetToRegisterAed = (
 interface OsmAedResult {
   filteredAedNodes: ReturnType<typeof filterDuplicates>["uniqueNodes"];
   elements: Awaited<ReturnType<typeof getOsmAeds>>["elements"];
-  stats: Pick<
-    SyncRunMetrics,
-    "osmAeds" | "managedOsmAeds" | "uniqueManagedOsmAeds"
-  >;
+  osmAedCount: number;
 }
 
 const captureUnlinkedNodeIssues = ({
@@ -123,11 +117,7 @@ const osmAeds = async ({
   return {
     filteredAedNodes,
     elements,
-    stats: {
-      osmAeds: aedNodes.length,
-      managedOsmAeds: managedAedNodes.length,
-      uniqueManagedOsmAeds: filteredAedNodes.length,
-    },
+    osmAedCount: aedNodes.length,
   };
 };
 
@@ -175,9 +165,13 @@ const osmClient = new OsmApiClient({
   userAgent: "hjertestarterregister2osm/0.1",
 });
 
+const syncStore = new SyncStoreClient({
+  connectionString: process.env.DATABASE_URL ?? "",
+});
+
 const main = async () => {
   const mode: SyncRunMode = reconcilerConfig.dryRun ? "dry-run" : "live";
-  const run = await startSyncRun({ mode });
+  const run = await syncStore.startRun({ mode });
   const issues: NewSyncIssue[] = [];
   const metrics: Partial<SyncRunMetrics> = {};
   let issuesPersisted = false;
@@ -186,10 +180,10 @@ const main = async () => {
   );
 
   try {
-    const { filteredAedNodes, elements, stats } = await osmAeds({ issues });
-    metrics.osmAeds = stats.osmAeds;
-    metrics.managedOsmAeds = stats.managedOsmAeds;
-    metrics.uniqueManagedOsmAeds = stats.uniqueManagedOsmAeds;
+    const { filteredAedNodes, elements, osmAedCount } = await osmAeds({
+      issues,
+    });
+    metrics.osmAeds = osmAedCount;
 
     const elementsForNearbyChecks = [...elements];
 
@@ -285,13 +279,13 @@ const main = async () => {
     metrics.skippedDeleteNotAedOnly = summary.skippedDeleteNotAedOnly;
     metrics.unchanged = summary.unchanged;
 
-    await replaceCurrentRunIssues({
+    await syncStore.replaceRunIssues({
       runId: run.id,
       issues,
     });
     issuesPersisted = true;
 
-    await completeSyncRun({
+    await syncStore.completeRun({
       runId: run.id,
       status: "success",
       metrics,
@@ -304,7 +298,7 @@ const main = async () => {
 
     if (!issuesPersisted) {
       try {
-        await replaceCurrentRunIssues({
+        await syncStore.replaceRunIssues({
           runId: run.id,
           issues,
         });
@@ -315,7 +309,7 @@ const main = async () => {
     }
 
     try {
-      await completeSyncRun({
+      await syncStore.completeRun({
         runId: run.id,
         status: "failed",
         errorMessage,
@@ -328,7 +322,7 @@ const main = async () => {
     throw error;
   } finally {
     try {
-      await closeSyncStore();
+      await syncStore.close();
     } catch (closeError) {
       console.error("Failed to close sync-store connection:", closeError);
     }
