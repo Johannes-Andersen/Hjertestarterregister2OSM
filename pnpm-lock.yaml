@@ -72,6 +72,9 @@ importers:
       undici:
         specifier: 7.22.0
         version: 7.22.0
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
 
   packages/osm-sdk:
     dependencies:
