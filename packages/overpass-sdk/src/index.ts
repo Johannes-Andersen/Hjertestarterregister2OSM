@@ -9,7 +9,7 @@ export type {
   OverpassElements,
   OverpassNode,
   OverpassOsmElement,
-  OverpassPointGeom,
+  OverpassPointGeo,
   OverpassQueryOptions,
   OverpassRelation,
   OverpassRelationMember,

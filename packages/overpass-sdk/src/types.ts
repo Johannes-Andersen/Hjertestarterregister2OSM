@@ -1,8 +1,7 @@
 import type { HeadersInit } from "undici";
 
 export interface OverpassSdkClientOptions {
-  origin?: string;
-  path?: string;
+  apiUrl?: string;
   maxRetries?: number;
   retryDelayMs?: number;
   requestTimeoutMs?: number;
@@ -57,17 +56,17 @@ export interface OverpassNode extends OverpassOsmElement {
 export interface OverpassWay extends OverpassOsmElement {
   type: "way";
   nodes: number[];
-  center?: OverpassPointGeom;
+  center?: OverpassPointGeo;
   bounds?: OverpassBbox;
-  geometry?: OverpassPointGeom[];
+  geometry?: OverpassPointGeo[];
 }
 
 export interface OverpassRelation extends OverpassOsmElement {
   type: "relation";
   members: OverpassRelationMember[];
-  center?: OverpassPointGeom;
+  center?: OverpassPointGeo;
   bounds?: OverpassBbox;
-  geometry?: OverpassPointGeom[];
+  geometry?: OverpassPointGeo[];
 }
 
 export interface OverpassRelationMember {
@@ -76,7 +75,7 @@ export interface OverpassRelationMember {
   role: string;
   lon?: number;
   lat?: number;
-  geometry?: OverpassPointGeom[];
+  geometry?: OverpassPointGeo[];
 }
 
 export interface OverpassArea extends OverpassElement {
@@ -105,7 +104,7 @@ export interface OverpassCount extends OverpassElement {
   };
 }
 
-export interface OverpassPointGeom {
+export interface OverpassPointGeo {
   lat: number;
   lon: number;
 }

@@ -1,6 +1,19 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "DRY",
+    "OSM_API_URL",
+    "OSM_AUTH_TOKEN",
+    "OSM_AUTH_HEADER",
+    "OVERPASS_API_URL",
+    "HJERTESTARTERREGISTER_CLIENT_ID",
+    "HJERTESTARTERREGISTER_CLIENT_SECRET",
+    "HJERTESTARTERREGISTER_API_BASE_URL",
+    "HJERTESTARTERREGISTER_OAUTH_TOKEN_URL",
+    "PLANETSCALE_DATABASE_URL",
+    "DATABASE_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

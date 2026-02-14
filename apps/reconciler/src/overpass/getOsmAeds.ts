@@ -2,8 +2,7 @@ import { OverpassApiClient, type OverpassResponse } from "@repo/overpass-sdk";
 import { overpassConfig } from "../config.ts";
 
 const overpassClient = new OverpassApiClient({
-  origin: overpassConfig.origin,
-  path: overpassConfig.path,
+  apiUrl: process.env.OVERPASS_API_URL,
   maxRetries: overpassConfig.maxRetries,
   requestTimeoutMs: overpassConfig.requestTimeoutMs,
 });

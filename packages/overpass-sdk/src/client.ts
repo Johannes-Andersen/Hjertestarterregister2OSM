@@ -6,8 +6,7 @@ import type {
   OverpassSdkClientOptions,
 } from "./types.ts";
 
-const defaultOrigin = "https://overpass-api.de";
-const defaultPath = "/api/interpreter";
+const defaultApiUrl = "https://overpass-api.de/api/interpreter";
 const defaultMaxRetries = 6;
 const defaultRetryDelayMs = 250;
 const defaultRequestTimeoutMs = 90_000;
@@ -35,8 +34,7 @@ const retryableTransportErrorCodes = new Set([
 ]);
 
 interface ResolvedConfiguration {
-  origin: string;
-  path: string;
+  apiUrl: string;
   maxRetries: number;
   retryDelayMs: number;
   requestTimeoutMs: number;
@@ -44,46 +42,32 @@ interface ResolvedConfiguration {
 }
 
 const normalizePositiveInteger = (value: number, fieldName: string): number => {
-  if (!Number.isFinite(value) || value < 0) {
+  if (!Number.isFinite(value) || value < 0)
     throw new OverpassSdkError(`${fieldName} must be a non-negative number.`);
-  }
 
   const normalized = Math.trunc(value);
   return normalized;
 };
 
 const normalizePositiveNumber = (value: number, fieldName: string): number => {
-  if (!Number.isFinite(value) || value <= 0) {
+  if (!Number.isFinite(value) || value <= 0)
     throw new OverpassSdkError(`${fieldName} must be a positive number.`);
-  }
 
   return value;
 };
 
-const normalizeOrigin = (origin: string): string => {
-  const value = origin.trim();
-  if (!value) throw new OverpassSdkError("origin must be a non-empty string.");
+const normalizeApiUrl = (apiUrl: string): string => {
+  const value = apiUrl.trim();
+  if (!value) throw new OverpassSdkError("apiUrl must be a non-empty string.");
 
   let url: URL;
   try {
     url = new URL(value);
   } catch {
-    throw new OverpassSdkError(`Invalid overpass origin: ${origin}`);
+    throw new OverpassSdkError(`Invalid overpass apiUrl: ${apiUrl}`);
   }
 
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new OverpassSdkError(
-      "origin must be an http or https URL for Overpass.",
-    );
-  }
-
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-};
-
-const normalizePath = (path: string): string => {
-  const value = path.trim();
-  if (!value) throw new OverpassSdkError("path must be a non-empty string.");
-  return value.startsWith("/") ? value : `/${value}`;
+  return url.toString();
 };
 
 const normalizeOptionalString = (value: string): string | undefined => {
@@ -95,12 +79,10 @@ const resolveConfiguration = (
   options: OverpassSdkClientOptions = {},
 ): ResolvedConfiguration => {
   return {
-    origin:
-      options.origin === undefined
-        ? defaultOrigin
-        : normalizeOrigin(options.origin),
-    path:
-      options.path === undefined ? defaultPath : normalizePath(options.path),
+    apiUrl:
+      options.apiUrl === undefined
+        ? defaultApiUrl
+        : normalizeApiUrl(options.apiUrl),
     maxRetries:
       options.maxRetries === undefined
         ? defaultMaxRetries
@@ -263,10 +245,7 @@ export class OverpassApiClient {
       throw new OverpassSdkError("Overpass query must be a non-empty string.");
     }
 
-    const url = new URL(
-      this.configuration.path,
-      `${this.configuration.origin}/`,
-    );
+    const url = new URL(this.configuration.apiUrl);
     const requestUrl = url.toString();
     const requestBody = new URLSearchParams({
       data: normalizedQuery,
@@ -285,9 +264,8 @@ export class OverpassApiClient {
             "application/x-www-form-urlencoded",
           );
         }
-        if (!requestHeaders.has("User-Agent")) {
+        if (!requestHeaders.has("User-Agent"))
           requestHeaders.set("User-Agent", this.configuration.userAgent);
-        }
 
         const response = await fetch(requestUrl, {
           method: "POST",
