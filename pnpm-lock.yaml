@@ -20,9 +20,9 @@ importers:
 
   apps/reconciler:
     dependencies:
-      '@repo/hjertestarterregister-api':
+      '@repo/hjertestarterregister-sdk':
         specifier: workspace:*
-        version: link:../../packages/hjertestarterregister-api
+        version: link:../../packages/hjertestarterregister-sdk
       '@repo/osm-sdk':
         specifier: workspace:*
         version: link:../../packages/osm-sdk
@@ -64,7 +64,7 @@ importers:
         specifier: 4.65.0
         version: 4.65.0(@cloudflare/workers-types@4.20260213.0)
 
-  packages/hjertestarterregister-api:
+  packages/hjertestarterregister-sdk:
     dependencies:
       '@repo/typescript-config':
         specifier: workspace:*

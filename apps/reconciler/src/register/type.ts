@@ -1,4 +1,4 @@
-import type { RegistryAsset } from "@repo/hjertestarterregister-api";
+import type { RegistryAsset } from "@repo/hjertestarterregister-sdk";
 
 export interface RegisterAed extends RegistryAsset {
   ASSET_GUID: string;

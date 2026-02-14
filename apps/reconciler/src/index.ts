@@ -1,7 +1,7 @@
 import {
   HjertestarterregisterApiClient,
   type RegistryAsset,
-} from "@repo/hjertestarterregister-api";
+} from "@repo/hjertestarterregister-sdk";
 import { OsmApiClient } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import {

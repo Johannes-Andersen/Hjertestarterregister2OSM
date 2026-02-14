@@ -147,7 +147,7 @@ export class HjertestarterregisterApiClient {
         const statusCode = (error as { statusCode?: number }).statusCode;
 
         console.warn(
-          `[hjertestarterregister-api] retry ${state.counter}/${maxRetries} ` +
+          `[hjertestarterregister-sdk] retry ${state.counter}/${maxRetries} ` +
             `(code=${errorCode ?? "-"} status=${statusCode ?? "-"}) ` +
             `${error.message}`,
         );

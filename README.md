@@ -11,7 +11,7 @@ This is a monorepo managed by [Turborepo](https://turborepo.dev/). This means mu
 - `website`: the website powered by astro.build
 - `reconciler`: the periodic run that imports data from https://hjertestarterregister.113.no/ and publishes it to OpenStreetMap
 - `@repo/sync-store`: shared PlanetScale PostgreSQL store for sync runs and issue tracking
-- `@repo/hjertestarterregister-api`: typed client package for the Hjertestarterregister API (OAuth + assets endpoints)
+- `@repo/hjertestarterregister-sdk`: typed client package for the Hjertestarterregister API (OAuth + assets endpoints)
 - `@repo/osm-sdk`: typed OSM SDK package for authenticated API calls and batched changeset uploads
 - `@repo/overpass-sdk`: typed Overpass SDK package for generic query execution with retries and configurable endpoints
 - `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
