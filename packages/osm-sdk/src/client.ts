@@ -10,10 +10,16 @@ import { OsmSdkError } from "./errors.ts";
 import type {
   AppliedBatch,
   ApplyBatchedChangesArguments,
-  ChangePlan,
   OsmSdkClientOptions,
-  PlannedNode,
+  PlannedOperation,
 } from "./types.ts";
+import {
+  buildChangesetComment,
+  createNodeFromPlan,
+  defaultCommentSubject,
+  sanitizeTags,
+  toPlannedOperations,
+} from "./utils.ts";
 
 const configSchema = z.object({
   apiUrl: z
@@ -29,106 +35,6 @@ const configSchema = z.object({
     .default("https://github.com/osmlab/osm-api-js"),
   changesetTags: z.record(z.string(), z.string()).default({}),
 });
-
-type CreateOperation = {
-  kind: "create";
-  node: PlannedNode;
-};
-
-type ModifyOperation = {
-  kind: "modify";
-  before: PlannedNode;
-  after: PlannedNode;
-  tagUpdates: Record<string, string | undefined>;
-};
-
-type DeleteOperation = {
-  kind: "delete";
-  node: PlannedNode;
-};
-
-type PlannedOperation = CreateOperation | ModifyOperation | DeleteOperation;
-const defaultCommentSubject = "OSM features";
-const operationListFormatter = new Intl.ListFormat("en", {
-  style: "long",
-  type: "conjunction",
-});
-
-const sanitizeTags = (tags: Record<string, string | undefined>) => {
-  const sanitized: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(tags)) {
-    if (value === undefined) continue;
-    sanitized[key] = value;
-  }
-
-  return sanitized;
-};
-
-const toPlannedOperations = (changePlan: ChangePlan) => {
-  const operations: PlannedOperation[] = [];
-
-  for (const create of changePlan.create) {
-    operations.push({
-      kind: "create",
-      node: create.node,
-    });
-  }
-
-  for (const modify of changePlan.modify) {
-    operations.push({
-      kind: "modify",
-      before: modify.before,
-      after: modify.after,
-      tagUpdates: modify.tagUpdates,
-    });
-  }
-
-  for (const deletion of changePlan.delete) {
-    operations.push({
-      kind: "delete",
-      node: deletion.node,
-    });
-  }
-
-  return operations;
-};
-
-const createNodeFromPlan = (plannedNode: PlannedNode): OsmNode => ({
-  type: "node",
-  lat: plannedNode.lat,
-  lon: plannedNode.lon,
-  tags: sanitizeTags(plannedNode.tags),
-  version: plannedNode.version ?? 0,
-  timestamp: "",
-  changeset: -1,
-  user: "",
-  uid: -1,
-  id: plannedNode.id,
-});
-
-const buildChangesetComment = ({
-  createCount,
-  modifyCount,
-  deleteCount,
-  commentSubject,
-}: {
-  createCount: number;
-  modifyCount: number;
-  deleteCount: number;
-  commentSubject: string;
-}) => {
-  const labels: string[] = [];
-  if (createCount > 0) labels.push("Added");
-  if (modifyCount > 0) labels.push("Modified");
-  if (deleteCount > 0) labels.push("Deleted");
-
-  const actionLabel = labels.length
-    ? operationListFormatter.format(labels)
-    : "Updated";
-
-  return `${actionLabel} ${commentSubject}`;
-};
 
 export class OsmApiClient {
   private readonly apiUrl: string;

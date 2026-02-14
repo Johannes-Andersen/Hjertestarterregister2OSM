@@ -1,3 +1,20 @@
+export type QueryValue = string | number | boolean | undefined | null;
+export type QueryParams =
+  | SearchAssetsParams
+  | SinceDateParams
+  | Record<string, QueryValue>;
+export type RequestBody =
+  | AssetUpsertPayload
+  | CreateMessagePayload
+  | Record<string, unknown>;
+
+export interface RequestOptions {
+  method: "GET" | "POST" | "PUT" | "DELETE";
+  path: string;
+  query?: QueryParams;
+  body?: RequestBody;
+}
+
 export type RegistryBoolean = "Y" | "N";
 
 export type SendVia = "EMAIL" | "SMS";

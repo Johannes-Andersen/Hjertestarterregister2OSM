@@ -10,9 +10,18 @@ import type {
   CreateMessagePayload,
   HjertestarterregisterApiClientOptions,
   OAuthAccessTokenResponse,
+  RequestOptions,
   SearchAssetsParams,
   SinceDateParams,
 } from "./types.ts";
+import {
+  applyQuery,
+  getErrorMessage,
+  getGuidSegment,
+  isRecord,
+  normalizeRequestBody,
+  parseApiMessage,
+} from "./utils.ts";
 
 const tokenSafetyWindowMs = 60_000;
 
@@ -30,85 +39,6 @@ const configSchema = z.object({
   clientSecret: z.string().min(1),
   maxRetries: z.int().nonnegative().default(3),
 });
-
-type QueryValue = string | number | boolean | undefined | null;
-type QueryParams =
-  | SearchAssetsParams
-  | SinceDateParams
-  | Record<string, QueryValue>;
-type RequestBody =
-  | AssetUpsertPayload
-  | CreateMessagePayload
-  | Record<string, unknown>;
-
-interface RequestOptions {
-  method: "GET" | "POST" | "PUT" | "DELETE";
-  path: string;
-  query?: QueryParams;
-  body?: RequestBody;
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const normalizeBoolean = (value: unknown): unknown =>
-  typeof value === "boolean" ? (value ? "Y" : "N") : value;
-
-const normalizeRequestBody = (body: RequestBody): Record<string, unknown> => {
-  const normalized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
-    normalized[key] = normalizeBoolean(value);
-  }
-  return normalized;
-};
-
-const applyQuery = (url: URL, query?: QueryParams) => {
-  if (!query) return;
-  for (const [key, value] of Object.entries(
-    query as Record<string, QueryValue>,
-  )) {
-    if (value === undefined || value === null) continue;
-    url.searchParams.set(key, String(value));
-  }
-};
-
-const getGuidSegment = (guid: string): string => {
-  const value = guid.trim();
-  if (!value) throw new Error("GUID must be a non-empty string.");
-  return encodeURIComponent(value);
-};
-
-interface ParsedApiMessage {
-  apiError?: string;
-  apiMessage?: string;
-  oauthError?: string;
-  oauthDescription?: string;
-}
-
-const parseApiMessage = (payload: unknown): ParsedApiMessage => {
-  if (!isRecord(payload)) return {};
-  return {
-    apiError:
-      typeof payload.API_ERROR === "string" ? payload.API_ERROR : undefined,
-    apiMessage:
-      typeof payload.API_MESSAGE === "string" ? payload.API_MESSAGE : undefined,
-    oauthError: typeof payload.error === "string" ? payload.error : undefined,
-    oauthDescription:
-      typeof payload.error_description === "string"
-        ? payload.error_description
-        : undefined,
-  };
-};
-
-const getErrorMessage = (
-  parsedMessage: ParsedApiMessage,
-  fallback: string,
-): string =>
-  parsedMessage.apiError ??
-  parsedMessage.oauthDescription ??
-  parsedMessage.oauthError ??
-  parsedMessage.apiMessage ??
-  fallback;
 
 export class HjertestarterregisterApiClient {
   readonly baseUrl: string;
