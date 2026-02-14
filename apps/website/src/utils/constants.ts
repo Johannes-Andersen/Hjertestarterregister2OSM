@@ -1,4 +1,4 @@
-import type { SyncIssueType } from "../db/types";
+import type { SyncIssueType } from "@repo/sync-store";
 
 export const issueTypeLabels: Record<SyncIssueType, string> = {
   osm_node_missing_ref: "OSM node missing register ref",

@@ -39,3 +39,60 @@ export interface SyncStoreClientOptions {
   connectTimeoutSeconds?: number;
   idleTimeoutSeconds?: number;
 }
+
+export interface SyncRunCounters {
+  updated: number;
+  created: number;
+  deleted: number;
+  skippedCreateNearby: number;
+  skippedDeleteNotAedOnly: number;
+  unchanged: number;
+}
+
+export interface SyncRunRecord extends SyncRunCounters {
+  id: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  status: SyncRunStatus;
+  mode: SyncRunMode;
+  errorMessage: string | null;
+  linkedAeds: number;
+}
+
+export interface SyncRunListItem extends SyncRunCounters {
+  id: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  status: SyncRunStatus;
+  mode: SyncRunMode;
+}
+
+export interface SyncOverviewRunData {
+  finishedAt: Date | null;
+  status: SyncRunStatus;
+  registryAeds: number;
+  osmAeds: number;
+  linkedAeds: number;
+}
+
+export interface SyncRunIssueListItem {
+  runId: string;
+  issueType: SyncIssueType;
+  severity: SyncIssueSeverity;
+  message: string;
+  registerRef: string | null;
+  osmNodeId: number | null;
+  createdAt: Date;
+}
+
+export interface SyncOverviewStats {
+  latestRun: SyncOverviewRunData | null;
+  latestSuccessfulRun: SyncOverviewRunData | null;
+  openIssueCount: number;
+  totalIssueCount: number;
+}
+
+export interface SyncIssueTypeCount {
+  issueType: SyncIssueType;
+  count: number;
+}

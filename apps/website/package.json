@@ -12,9 +12,9 @@
     "gen-types": "wrangler types"
   },
   "dependencies": {
+    "@repo/sync-store": "workspace:*",
     "@astrojs/cloudflare": "12.6.12",
-    "astro": "5.17.2",
-    "postgres": "3.4.7"
+    "astro": "5.17.2"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
