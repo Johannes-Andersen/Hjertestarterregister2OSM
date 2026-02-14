@@ -4,7 +4,7 @@ import { overpassConfig } from "../config.ts";
 const overpassClient = new OverpassApiClient({
   apiUrl: process.env.OVERPASS_API_URL,
   maxRetries: overpassConfig.maxRetries,
-  requestTimeoutMs: overpassConfig.requestTimeoutMs,
+  minRetryDelayMs: overpassConfig.minRetryDelayMs,
 });
 
 const query = `

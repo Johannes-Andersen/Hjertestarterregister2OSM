@@ -1,7 +1,7 @@
 interface OverpassSdkErrorOptions {
   status?: number;
   statusText?: string;
-  url?: string;
+  url?: URL;
   responseBody?: unknown;
   attempts?: number;
   cause?: unknown;
@@ -19,7 +19,7 @@ export class OverpassSdkError extends Error {
     this.name = "OverpassSdkError";
     this.status = options.status;
     this.statusText = options.statusText;
-    this.url = options.url;
+    this.url = options.url?.toString();
     this.responseBody = options.responseBody;
     this.attempts = options.attempts;
   }

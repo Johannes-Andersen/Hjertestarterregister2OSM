@@ -2,10 +2,9 @@ import type { HeadersInit } from "undici";
 
 export interface OverpassSdkClientOptions {
   apiUrl?: string;
-  maxRetries?: number;
-  retryDelayMs?: number;
-  requestTimeoutMs?: number;
   userAgent?: string;
+  maxRetries?: number;
+  minRetryDelayMs?: number;
 }
 
 export interface OverpassQueryOptions {

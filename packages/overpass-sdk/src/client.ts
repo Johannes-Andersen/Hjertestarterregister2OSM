@@ -1,4 +1,4 @@
-import { Agent, type Dispatcher, fetch, Headers } from "undici";
+import { Agent, Headers, RetryAgent } from "undici";
 import * as z from "zod";
 import { OverpassSdkError } from "./errors.ts";
 import type {
@@ -7,192 +7,82 @@ import type {
   OverpassSdkClientOptions,
 } from "./types.ts";
 
-const defaultApiUrl = "https://overpass-api.de/api/interpreter";
-const defaultMaxRetries = 6;
-const defaultRetryDelayMs = 250;
-const defaultRequestTimeoutMs = 90_000;
-const defaultUserAgent = "overpass-sdk";
-const timeoutErrorCodes = new Set([
-  "UND_ERR_CONNECT_TIMEOUT",
-  "UND_ERR_HEADERS_TIMEOUT",
-  "UND_ERR_BODY_TIMEOUT",
-]);
-const retryableStatusCodes = new Set([429, 500, 502, 503, 504]);
-const retryableTransportErrorCodes = new Set([
-  "ECONNRESET",
-  "ECONNREFUSED",
-  "ENOTFOUND",
-  "ENETDOWN",
-  "ENETUNREACH",
-  "EHOSTDOWN",
-  "EHOSTUNREACH",
-  "EPIPE",
-  "UND_ERR_SOCKET",
-  "UND_ERR_CONNECT_TIMEOUT",
-  "UND_ERR_HEADERS_TIMEOUT",
-  "UND_ERR_BODY_TIMEOUT",
-  "UND_ERR_REQ_CONTENT_LENGTH_MISMATCH",
-]);
-
-interface ResolvedConfiguration {
-  apiUrl: string;
-  maxRetries: number;
-  retryDelayMs: number;
-  requestTimeoutMs: number;
-  userAgent: string;
-}
-
-const resolveConfiguration = (
-  options: OverpassSdkClientOptions = {},
-): ResolvedConfiguration => {
-  return z
-    .object({
-      apiUrl: z
-        .url({
-          protocol: /^https?$/,
-          hostname: z.regexes.domain,
-        })
-        .default(defaultApiUrl),
-      maxRetries: z.int().positive().default(defaultMaxRetries),
-      retryDelayMs: z.number().positive().default(defaultRetryDelayMs),
-      requestTimeoutMs: z.number().positive().default(defaultRequestTimeoutMs),
-      userAgent: z.string().min(3).default(defaultUserAgent),
-    })
-    .parse(options);
-};
-
-const createDispatcher = ({
-  requestTimeoutMs,
-}: Pick<ResolvedConfiguration, "requestTimeoutMs">): Dispatcher => {
-  return new Agent({
-    allowH2: true,
-    bodyTimeout: requestTimeoutMs,
-    headersTimeout: requestTimeoutMs,
-  });
-};
-
-const hasCode = (error: unknown): error is Error & { code: string } =>
-  error instanceof Error &&
-  typeof (error as { code?: unknown }).code === "string";
-
-const findErrorCode = (error: unknown): string | undefined => {
-  let current: unknown = error;
-
-  while (current instanceof Error) {
-    if (hasCode(current)) return current.code;
-    current = (current as { cause?: unknown }).cause;
-  }
-
-  return undefined;
-};
-
-const isRetryableError = (error: unknown): boolean => {
-  if (error instanceof OverpassSdkError) {
-    return error.status !== undefined && retryableStatusCodes.has(error.status);
-  }
-
-  const code = findErrorCode(error);
-  return code !== undefined && retryableTransportErrorCodes.has(code);
-};
-
-const waitForRetryDelay = async (
-  delayMs: number,
-  signal?: AbortSignal,
-): Promise<void> => {
-  await new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException("Request aborted.", "AbortError"));
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, delayMs);
-
-    const onAbort = (): void => {
-      clearTimeout(timeoutId);
-      signal?.removeEventListener("abort", onAbort);
-      reject(new DOMException("Request aborted.", "AbortError"));
-    };
-
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-};
-
-const toError = (
-  error: unknown,
-  {
-    url,
-    requestTimeoutMs,
-    signal,
-    attempts,
-  }: {
-    url: string;
-    requestTimeoutMs: number;
-    signal?: AbortSignal;
-    attempts?: number;
-  },
-): OverpassSdkError => {
-  if (error instanceof OverpassSdkError) {
-    return new OverpassSdkError(error.message, {
-      status: error.status,
-      statusText: error.statusText,
-      url: error.url ?? url,
-      responseBody: error.responseBody,
-      attempts: error.attempts ?? attempts,
-      cause: error.cause,
-    });
-  }
-
-  if (signal?.aborted) {
-    return new OverpassSdkError("Overpass request was aborted.", {
-      url,
-      attempts,
-      cause: error,
-    });
-  }
-
-  const errorCode = findErrorCode(error);
-  if (errorCode !== undefined && timeoutErrorCodes.has(errorCode)) {
-    return new OverpassSdkError(
-      `Overpass request timed out after ${requestTimeoutMs}ms.`,
-      {
-        url,
-        attempts,
-        cause: error,
-      },
-    );
-  }
-
-  if (error instanceof Error) {
-    return new OverpassSdkError(error.message, {
-      url,
-      attempts,
-      cause: error,
-    });
-  }
-
-  return new OverpassSdkError("Overpass request failed.", {
-    url,
-    attempts,
-    cause: error,
-  });
-};
+const configSchema = z.object({
+  apiUrl: z
+    .url({ protocol: /^https?$/, hostname: z.regexes.domain })
+    .default("https://overpass-api.de/api/interpreter"),
+  maxRetries: z.int().nonnegative().default(5),
+  minRetryDelayMs: z.number().positive().default(500),
+  userAgent: z.string().min(3).default("overpass-sdk"),
+});
 
 export class OverpassApiClient {
-  private readonly dispatcher: Dispatcher;
-  private readonly configuration: ResolvedConfiguration;
+  private readonly dispatcher: RetryAgent;
+  private readonly apiUrl: string;
+  private readonly userAgent: string;
 
   constructor(options: OverpassSdkClientOptions = {}) {
-    this.configuration = resolveConfiguration(options);
-    this.dispatcher = createDispatcher({
-      requestTimeoutMs: this.configuration.requestTimeoutMs,
-    });
-  }
+    const config = configSchema.parse(options);
+    this.apiUrl = config.apiUrl;
+    this.userAgent = config.userAgent;
 
-  getConfig(): Readonly<ResolvedConfiguration> {
-    return { ...this.configuration };
+    this.dispatcher = new RetryAgent(new Agent(), {
+      maxRetries: config.maxRetries,
+      minTimeout: config.minRetryDelayMs,
+      methods: [
+        // Added POST since Overpass API uses POST for queries
+        "POST",
+        "GET",
+        "HEAD",
+        "OPTIONS",
+        "PUT",
+        "DELETE",
+        "TRACE",
+      ],
+      errorCodes: [
+        // Needed due to some Overpass servers responding with incorrect Content-Length headers on error
+        "UND_ERR_REQ_CONTENT_LENGTH_MISMATCH",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ENOTFOUND",
+        "ENETDOWN",
+        "ENETUNREACH",
+        "EHOSTDOWN",
+        "EHOSTUNREACH",
+        "EPIPE",
+      ],
+      throwOnError: false,
+      retry: (error, context, callback) => {
+        const {
+          state,
+          opts: { retryOptions },
+        } = context;
+
+        const maxRetries = retryOptions?.maxRetries || config.maxRetries;
+        const minTimeout = retryOptions?.minTimeout || config.minRetryDelayMs;
+        const timeoutFactor = retryOptions?.timeoutFactor || 2;
+        const maxTimeout = retryOptions?.maxTimeout || 30_000;
+
+        const errorCode = (error as { code?: string }).code;
+        const statusCode = (error as { statusCode?: number }).statusCode;
+
+        console.warn(
+          `[overpass-sdk] retry ${state.counter}/${maxRetries} ` +
+            `(code=${errorCode ?? "-"} status=${statusCode ?? "-"}) ` +
+            `${error.message}`,
+        );
+
+        if (state.counter >= maxRetries) return callback(error);
+
+        const delayMs = Math.min(
+          minTimeout * timeoutFactor ** state.counter,
+          maxTimeout,
+        );
+
+        state.counter++;
+        setTimeout(() => callback(null), delayMs);
+      },
+    });
   }
 
   async query<TResponse = OverpassResponse>(
@@ -200,118 +90,73 @@ export class OverpassApiClient {
     options: OverpassQueryOptions = {},
   ): Promise<TResponse> {
     const normalizedQuery = queryText.trim();
-    if (!normalizedQuery) {
+    if (!normalizedQuery)
       throw new OverpassSdkError("Overpass query must be a non-empty string.");
-    }
 
-    const url = new URL(this.configuration.apiUrl);
-    const requestUrl = url.toString();
-    const requestBody = new URLSearchParams({
-      data: normalizedQuery,
-    }).toString();
-    const maxAttempts = this.configuration.maxRetries + 1;
+    const requestUrl = new URL(this.apiUrl);
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      try {
-        const requestHeaders = new Headers(options.headers ?? {});
-        if (!requestHeaders.has("Accept")) {
-          requestHeaders.set("Accept", "application/json");
-        }
-        if (!requestHeaders.has("Content-Type")) {
-          requestHeaders.set(
-            "Content-Type",
-            "application/x-www-form-urlencoded",
-          );
-        }
-        if (!requestHeaders.has("User-Agent"))
-          requestHeaders.set("User-Agent", this.configuration.userAgent);
-
-        const response = await fetch(requestUrl, {
-          method: "POST",
-          headers: requestHeaders,
-          body: requestBody,
-          signal: options.signal,
-          dispatcher: this.dispatcher,
-        });
-
-        const text = await response.text();
-
-        let payload: unknown;
-        if (text.trim()) {
-          try {
-            payload = JSON.parse(text) as unknown;
-          } catch {
-            if (response.ok) {
-              throw new OverpassSdkError(
-                "Overpass response body was not valid JSON.",
-                {
-                  status: response.status,
-                  statusText: response.statusText,
-                  url: requestUrl,
-                  responseBody: text,
-                  attempts: attempt,
-                },
-              );
-            }
-
-            payload = text;
-          }
-        } else {
-          payload = {};
-        }
-
-        if (!response.ok) {
-          throw new OverpassSdkError(
-            `Overpass request failed with status ${response.status}.`,
-            {
-              status: response.status,
-              statusText: response.statusText,
-              url: requestUrl,
-              responseBody: payload,
-              attempts: attempt,
-            },
-          );
-        }
-
-        return payload as TResponse;
-      } catch (error) {
-        if (options.signal?.aborted) {
-          throw toError(error, {
-            url: requestUrl,
-            requestTimeoutMs: this.configuration.requestTimeoutMs,
-            signal: options.signal,
-            attempts: attempt,
-          });
-        }
-
-        if (attempt >= maxAttempts || !isRetryableError(error)) {
-          throw toError(error, {
-            url: requestUrl,
-            requestTimeoutMs: this.configuration.requestTimeoutMs,
-            signal: options.signal,
-            attempts: attempt,
-          });
-        }
-
-        try {
-          await waitForRetryDelay(
-            this.configuration.retryDelayMs,
-            options.signal,
-          );
-        } catch (waitError) {
-          throw toError(waitError, {
-            url: requestUrl,
-            requestTimeoutMs: this.configuration.requestTimeoutMs,
-            signal: options.signal,
-            attempts: attempt,
-          });
-        }
-      }
-    }
-
-    throw new OverpassSdkError("Overpass request failed after retries.", {
-      url: requestUrl,
-      attempts: maxAttempts,
+    const headers = new Headers({
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": this.userAgent,
     });
+    if (options.headers)
+      for (const [key, value] of new Headers(options.headers)) {
+        headers.set(key, value);
+      }
+
+    let statusCode: number;
+    let text: string;
+    try {
+      const response = await this.dispatcher.request({
+        origin: requestUrl.origin,
+        path: requestUrl.pathname + requestUrl.search,
+        method: "POST",
+        headers,
+        body: new URLSearchParams({ data: normalizedQuery }).toString(),
+        signal: options.signal ?? undefined,
+      });
+
+      statusCode = response.statusCode;
+      text = await response.body.text();
+    } catch (error) {
+      if (options.signal?.aborted) {
+        throw new OverpassSdkError("Overpass request was aborted.", {
+          url: requestUrl,
+          cause: error,
+        });
+      }
+      throw new OverpassSdkError(
+        error instanceof Error ? error.message : "Overpass request failed.",
+        { url: requestUrl, cause: error },
+      );
+    }
+
+    const isOk = statusCode >= 200 && statusCode < 300;
+
+    let payload: unknown;
+    if (text.trim()) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        if (isOk) {
+          throw new OverpassSdkError(
+            "Overpass response body was not valid JSON.",
+            { status: statusCode, url: requestUrl, responseBody: text },
+          );
+        }
+        payload = text;
+      }
+    } else {
+      payload = {};
+    }
+
+    if (!isOk)
+      throw new OverpassSdkError(
+        `Overpass request failed with status ${statusCode}.`,
+        { status: statusCode, url: requestUrl, responseBody: payload },
+      );
+
+    return payload as TResponse;
   }
 }

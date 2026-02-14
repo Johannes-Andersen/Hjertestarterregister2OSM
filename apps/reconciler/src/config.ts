@@ -5,9 +5,9 @@ const outputDir = `${currentDir}/../out`;
 
 export const overpassConfig = {
   apiUrl: process.env.OVERPASS_API_URL,
-  maxRetries: 6,
   queryTimeoutSeconds: 60,
-  requestTimeoutMs: 90_000, // 90 seconds
+  minRetryDelayMs: 5_000, // 5 seconds
+  maxRetries: 6,
 };
 
 export const changesetConfig = {
