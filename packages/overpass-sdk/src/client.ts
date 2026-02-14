@@ -1,4 +1,5 @@
 import { Agent, type Dispatcher, fetch, Headers } from "undici";
+import * as z from "zod";
 import { OverpassSdkError } from "./errors.ts";
 import type {
   OverpassQueryOptions,
@@ -41,65 +42,23 @@ interface ResolvedConfiguration {
   userAgent: string;
 }
 
-const normalizePositiveInteger = (value: number, fieldName: string): number => {
-  if (!Number.isFinite(value) || value < 0)
-    throw new OverpassSdkError(`${fieldName} must be a non-negative number.`);
-
-  const normalized = Math.trunc(value);
-  return normalized;
-};
-
-const normalizePositiveNumber = (value: number, fieldName: string): number => {
-  if (!Number.isFinite(value) || value <= 0)
-    throw new OverpassSdkError(`${fieldName} must be a positive number.`);
-
-  return value;
-};
-
-const normalizeApiUrl = (apiUrl: string): string => {
-  const value = apiUrl.trim();
-  if (!value) throw new OverpassSdkError("apiUrl must be a non-empty string.");
-
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new OverpassSdkError(`Invalid overpass apiUrl: ${apiUrl}`);
-  }
-
-  return url.toString();
-};
-
-const normalizeOptionalString = (value: string): string | undefined => {
-  const normalized = value.trim();
-  return normalized ? normalized : undefined;
-};
-
 const resolveConfiguration = (
   options: OverpassSdkClientOptions = {},
 ): ResolvedConfiguration => {
-  return {
-    apiUrl:
-      options.apiUrl === undefined
-        ? defaultApiUrl
-        : normalizeApiUrl(options.apiUrl),
-    maxRetries:
-      options.maxRetries === undefined
-        ? defaultMaxRetries
-        : normalizePositiveInteger(options.maxRetries, "maxRetries"),
-    retryDelayMs:
-      options.retryDelayMs === undefined
-        ? defaultRetryDelayMs
-        : normalizePositiveNumber(options.retryDelayMs, "retryDelayMs"),
-    requestTimeoutMs:
-      options.requestTimeoutMs === undefined
-        ? defaultRequestTimeoutMs
-        : normalizePositiveNumber(options.requestTimeoutMs, "requestTimeoutMs"),
-    userAgent:
-      options.userAgent === undefined
-        ? defaultUserAgent
-        : (normalizeOptionalString(options.userAgent) ?? defaultUserAgent),
-  };
+  return z
+    .object({
+      apiUrl: z
+        .url({
+          protocol: /^https?$/,
+          hostname: z.regexes.domain,
+        })
+        .default(defaultApiUrl),
+      maxRetries: z.int().positive().default(defaultMaxRetries),
+      retryDelayMs: z.number().positive().default(defaultRetryDelayMs),
+      requestTimeoutMs: z.number().positive().default(defaultRequestTimeoutMs),
+      userAgent: z.string().min(3).default(defaultUserAgent),
+    })
+    .parse(options);
 };
 
 const createDispatcher = ({
