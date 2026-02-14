@@ -1,9 +1,9 @@
+import type { OverpassNode } from "@repo/overpass-sdk";
 import type {
   NewSyncIssue,
   SyncRunMetrics,
   SyncRunMode,
 } from "@repo/sync-store";
-import type { OverpassNode } from "@repo/overpass-sdk";
 import { registerClient } from "../clients/registerClient.ts";
 import {
   createReconciliationChangePlan,

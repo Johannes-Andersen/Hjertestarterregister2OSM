@@ -175,7 +175,8 @@ export const planUpdateAedChanges = ({
         osmNodeId: node.id,
         details: {
           distanceMeters: Number(locationDistanceMeters.toFixed(2)),
-          maxNoMoveDistanceMeters: reconcilerConfig.changedLocationDistanceMeters,
+          maxNoMoveDistanceMeters:
+            reconcilerConfig.changedLocationDistanceMeters,
           osmLocation: { lat: node.lat, lon: node.lon },
           registerLocation: {
             lat: registerAed.SITE_LATITUDE,

@@ -5,8 +5,7 @@ export const issueTypeLabels: Record<SyncIssueType, string> = {
   osm_node_missing_ref: "OSM node missing register ref",
   osm_node_note_opt_out: "OSM node opted out via note",
   osm_duplicate_register_ref: "Duplicate register ref in OSM",
-  aed_split_non_standalone_node:
-    "Split AED from mixed-purpose OSM node",
+  aed_split_non_standalone_node: "Split AED from mixed-purpose OSM node",
   managed_node_location_within_tolerance:
     "Managed node moved in OSM (kept existing location)",
   skipped_create_nearby: "Skipped create due to nearby node",

@@ -1,8 +1,8 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue } from "@repo/sync-store";
 import {
-  filterDuplicates,
   type DuplicateRefGroup,
+  filterDuplicates,
 } from "../utils/filterDuplicates.ts";
 import { getOsmAeds } from "../utils/getOsmAeds.ts";
 import { isManagedAed } from "../utils/isManagedAed.ts";
