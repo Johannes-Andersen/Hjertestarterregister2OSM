@@ -17,7 +17,6 @@ import {
   buildChangesetComment,
   createNodeFromPlan,
   defaultCommentSubject,
-  sanitizeTags,
   toPlannedOperations,
 } from "./utils.ts";
 
@@ -117,15 +116,24 @@ export class OsmApiClient {
             );
           }
 
-          const tagPatch = sanitizeTags(operation.tagUpdates);
+          const nextTags = {
+            ...(existingNode.tags ?? {}),
+          };
+
+          for (const [key, value] of Object.entries(operation.tagUpdates)) {
+            if (value === undefined) {
+              delete nextTags[key];
+              continue;
+            }
+
+            nextTags[key] = value;
+          }
+
           modifyNodes.push({
             ...existingNode,
             lat: operation.after.lat,
             lon: operation.after.lon,
-            tags: {
-              ...(existingNode.tags ?? {}),
-              ...tagPatch,
-            },
+            tags: nextTags,
           });
 
           continue;

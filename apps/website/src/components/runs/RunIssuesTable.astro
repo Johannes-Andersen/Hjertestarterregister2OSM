@@ -25,7 +25,10 @@ const { issues, emptyText = "No issues were recorded for this run." } = Astro.pr
         <tbody>
           {issues.map((issue) => (
             <tr>
-              <td>{issueTypeLabels[issue.issueType] ?? issue.issueType}</td>
+              <td>
+                <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
+                <code>{issue.issueType}</code>
+              </td>
               <td>{issue.severity}</td>
               <td>{issue.message}</td>
               <td>
@@ -68,6 +71,12 @@ const { issues, emptyText = "No issues were recorded for this run." } = Astro.pr
     padding: 0.6rem;
     font-size: 0.9rem;
     white-space: nowrap;
+  }
+
+  td code {
+    margin-left: 0.4rem;
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
   }
 
   .empty {

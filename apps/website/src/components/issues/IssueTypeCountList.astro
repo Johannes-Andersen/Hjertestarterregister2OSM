@@ -23,7 +23,10 @@ const {
     <ul class:list={["issue-type-count-list", layout]}>
       {counts.map((entry) => (
         <li>
-          <span>{issueTypeLabels[entry.issueType] ?? entry.issueType}</span>
+          <span class="type-label">
+            {issueTypeLabels[entry.issueType] ?? entry.issueType}
+            <code>{entry.issueType}</code>
+          </span>
           <strong>{formatNumber(entry.count)}</strong>
         </li>
       ))}
@@ -54,6 +57,16 @@ const {
     border: 1px solid #dbe3df;
     border-radius: 0.7rem;
     padding: 0.6rem;
+  }
+
+  .type-label {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .type-label code {
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
   }
 
   .empty {

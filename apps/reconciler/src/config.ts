@@ -47,7 +47,8 @@ export const changesetConfig = {
 
 export const reconcilerConfig = {
   mode,
-  changedLocationDistanceMeters: 10,
+  changedLocationDistanceMeters: 50,
+  unmanagedMergeDistanceMeters: 20,
   nearbyAedDistanceMeters: 20,
   previewOscOutputPath: `${outputDir}/dry-run-changes.osc`,
   previewGeojsonOutputPath: `${outputDir}/dry-run-changes.geojson`,

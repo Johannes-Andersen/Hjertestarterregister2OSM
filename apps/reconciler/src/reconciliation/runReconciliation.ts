@@ -3,6 +3,7 @@ import type {
   SyncRunMetrics,
   SyncRunMode,
 } from "@repo/sync-store";
+import type { OverpassNode } from "@repo/overpass-sdk";
 import { registerClient } from "../clients/registerClient.ts";
 import {
   createReconciliationChangePlan,
@@ -14,9 +15,21 @@ import { loadManagedOsmAeds } from "./loadManagedOsmAeds.ts";
 import { loadRegisterAeds } from "./loadRegisterAeds.ts";
 import { planCreateAedChanges } from "./tasks/planCreateAedChanges.ts";
 import { planDeleteAedChanges } from "./tasks/planDeleteAedChanges.ts";
+import { planLinkUnmanagedAedChanges } from "./tasks/planLinkUnmanagedAedChanges.ts";
+import { planResolveDuplicateAedChanges } from "./tasks/planResolveDuplicateAedChanges.ts";
 import { planUpdateAedChanges } from "./tasks/planUpdateAedChanges.ts";
 
 const defaultRegisterMaxRows = 50_000;
+
+const createMissingRefIssue = (node: OverpassNode): NewSyncIssue => ({
+  type: "osm_node_missing_ref",
+  severity: "warning",
+  message: `Node ${node.id} is missing ref:hjertestarterregister.`,
+  osmNodeId: node.id,
+  details: {
+    tags: node.tags ?? {},
+  },
+});
 
 interface RunReconciliationArgs {
   mode: SyncRunMode;
@@ -37,6 +50,9 @@ export const runReconciliation = async ({
   const {
     elements,
     managedNodes,
+    duplicateRefGroups,
+    unmanagedNodes,
+    optedOutRegisterRefs,
     aedNodeCount,
     issues: osmIssues,
   } = await loadManagedOsmAeds();
@@ -59,11 +75,24 @@ export const runReconciliation = async ({
   const summary = createReconciliationSummary();
   const changePlan = createReconciliationChangePlan();
   const matchedRegisterIds = new Set<string>();
+  for (const ref of optedOutRegisterRefs) {
+    matchedRegisterIds.add(ref);
+  }
   const elementsForNearbyChecks = [...elements];
+  const { deduplicatedManagedNodes } = await planResolveDuplicateAedChanges({
+    mode,
+    managedAedNodes: managedNodes,
+    duplicateRefGroups,
+    registerAedsById,
+    elementsForNearbyChecks,
+    changePlan,
+    summary,
+    issues,
+  });
 
   await planDeleteAedChanges({
     mode,
-    managedAedNodes: managedNodes,
+    managedAedNodes: deduplicatedManagedNodes,
     registerAedsById,
     changePlan,
     summary,
@@ -72,13 +101,30 @@ export const runReconciliation = async ({
 
   planUpdateAedChanges({
     mode,
-    managedAedNodes: managedNodes,
+    managedAedNodes: deduplicatedManagedNodes,
     registerAedsById,
     matchedRegisterIds,
     elementsForNearbyChecks,
     changePlan,
     summary,
+    issues,
   });
+
+  const { linkedUnmanagedNodeIds } = planLinkUnmanagedAedChanges({
+    mode,
+    unmanagedAedNodes: unmanagedNodes,
+    registerAedsById,
+    matchedRegisterIds,
+    elementsForNearbyChecks,
+    changePlan,
+    summary,
+    issues,
+  });
+
+  for (const node of unmanagedNodes) {
+    if (linkedUnmanagedNodeIds.has(node.id)) continue;
+    issues.push(createMissingRefIssue(node));
+  }
 
   planCreateAedChanges({
     mode,

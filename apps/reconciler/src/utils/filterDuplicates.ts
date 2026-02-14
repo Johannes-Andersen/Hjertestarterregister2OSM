@@ -3,6 +3,7 @@ import type { OverpassNode } from "@repo/overpass-sdk";
 export interface DuplicateRefGroup {
   ref: string;
   nodeIds: number[];
+  nodes: OverpassNode[];
 }
 
 export interface DuplicateFilterResult {
@@ -47,6 +48,7 @@ export const filterDuplicates = (
     duplicates.push({
       ref,
       nodeIds: nodes.map((node) => node.id).sort((left, right) => left - right),
+      nodes: [...nodes].sort((left, right) => left.id - right.id),
     });
   }
 

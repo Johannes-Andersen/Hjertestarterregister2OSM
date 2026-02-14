@@ -17,9 +17,10 @@ const { issues, emptyText = "No current issues." } = Astro.props;
       {issues.map((issue) => (
         <article class:list={["issue-card", issue.severity]}>
           <div class="top-row">
-            <span class="type">
-              {issueTypeLabels[issue.issueType] ?? issue.issueType}
-            </span>
+            <div class="type">
+              <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
+              <code>{issue.issueType}</code>
+            </div>
             <span class="severity">{issue.severity}</span>
           </div>
           <p class="message">{issue.message}</p>
@@ -84,8 +85,18 @@ const { issues, emptyText = "No current issues." } = Astro.props;
   }
 
   .type {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .type span {
     font-weight: 700;
     font-size: 0.95rem;
+  }
+
+  .type code {
+    color: var(--ink-subtle);
+    font-size: 0.75rem;
   }
 
   .severity {

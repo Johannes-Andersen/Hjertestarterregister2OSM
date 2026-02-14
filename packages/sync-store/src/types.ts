@@ -5,8 +5,12 @@ export type SyncRunStatus = "running" | "success" | "failed";
 export type SyncIssueSeverity = "warning" | "error";
 
 export type SyncIssueType =
+  | "register_aed_outside_norway"
   | "osm_node_missing_ref"
+  | "osm_node_note_opt_out"
   | "osm_duplicate_register_ref"
+  | "aed_split_non_standalone_node"
+  | "managed_node_location_within_tolerance"
   | "skipped_create_nearby"
   | "skipped_delete_not_aed_only";
 
