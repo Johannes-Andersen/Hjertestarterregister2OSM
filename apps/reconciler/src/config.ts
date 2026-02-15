@@ -39,8 +39,11 @@ export const changesetConfig = {
   commentSubject: "AED locations",
   commonTags: {
     created_by: `hjertestarterregister2osm v${version}`,
-    source: "Hjertestarterregisteret: https://hjertestarterregister.113.no",
+    source: "Hjertestarterregisteret",
+    "source:url": "https://hjertestarterregister.113.no",
     "source:date": new Date().toISOString(),
+    "import:page":
+      "https://wiki.openstreetmap.org/w/index.php?title=Import/Catalogue/AED_import_for_Norway",
     bot: "yes",
   },
 } as const;
