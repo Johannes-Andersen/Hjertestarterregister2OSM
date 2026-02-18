@@ -14,60 +14,59 @@ const { latestSuccessfulRun } = Astro.props;
     <p class="eyebrow">Live Operational Snapshot</p>
     <h2>Registry and OSM sync health at a glance</h2>
     <p class="subtle">
-      Last successful sync {
-        latestSuccessfulRun?.finishedAt
+      Last successful sync
+      {latestSuccessfulRun?.finishedAt
           ? formatDistanceToNow(latestSuccessfulRun.finishedAt)
-          : "has not completed yet"
-      }.
+          : "has not completed yet"}.
     </p>
   </div>
   <a href="/runs" class="cta">View full run log</a>
 </section>
 
 <style>
+.hero {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: space-between;
+  padding: 1.2rem 1.3rem;
+  margin-bottom: 1rem;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero h2 {
+  margin: 0.4rem 0;
+  font-size: clamp(1.3rem, 2.8vw, 1.9rem);
+}
+
+.subtle {
+  margin: 0;
+  color: var(--ink-subtle);
+}
+
+.cta {
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--accent);
+  border-radius: 0.8rem;
+}
+
+@media (max-width: 720px) {
   .hero {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.2rem 1.3rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: var(--bg-1);
-    margin-bottom: 1rem;
-    align-items: start;
+    flex-direction: column;
   }
-
-  .eyebrow {
-    margin: 0;
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-subtle);
-  }
-
-  .hero h2 {
-    margin: 0.4rem 0;
-    font-size: clamp(1.3rem, 2.8vw, 1.9rem);
-  }
-
-  .subtle {
-    margin: 0;
-    color: var(--ink-subtle);
-  }
-
-  .cta {
-    padding: 0.6rem 1rem;
-    border-radius: 0.8rem;
-    background: var(--accent);
-    color: #fff;
-    text-decoration: none;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 720px) {
-    .hero {
-      flex-direction: column;
-    }
-  }
+}
 </style>

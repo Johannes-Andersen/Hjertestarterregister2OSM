@@ -14,11 +14,11 @@ const { baselineRun, openIssueCount } = Astro.props;
   <article>
     <h3>AEDs in OSM</h3>
     <p class="metric">{formatNumber(baselineRun?.osmAeds)}</p>
-    <small
-      >From latest {
-        baselineRun?.status === "success" ? "successful" : "recorded"
-      } run</small
-    >
+    <small>
+      From latest
+      {baselineRun?.status === "success" ? "successful" : "recorded"}
+      run
+    </small>
   </article>
   <article>
     <h3>AEDs in registry</h3>
@@ -40,47 +40,47 @@ const { baselineRun, openIssueCount } = Astro.props;
 </section>
 
 <style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.stats-grid article {
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.stats-grid h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-subtle);
+}
+
+.metric {
+  margin: 0.4rem 0;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  font-variant: tabular-nums;
+}
+
+.stats-grid small {
+  color: var(--ink-subtle);
+}
+
+.stats-grid code {
+  padding: 0.05rem 0.3rem;
+  font-size: 0.82rem;
+  background: #eef2f0;
+  border-radius: 0.35rem;
+}
+
+@media (max-width: 980px) {
   .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.8rem;
-    margin-bottom: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .stats-grid article {
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 0.9rem 1rem;
-    background: rgba(255, 255, 255, 0.8);
-  }
-
-  .stats-grid h3 {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--ink-subtle);
-  }
-
-  .metric {
-    margin: 0.4rem 0;
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
-    font-weight: 700;
-    font-variant: tabular-nums;
-  }
-
-  .stats-grid small {
-    color: var(--ink-subtle);
-  }
-
-  .stats-grid code {
-    background: #eef2f0;
-    border-radius: 0.35rem;
-    padding: 0.05rem 0.3rem;
-    font-size: 0.82rem;
-  }
-
-  @media (max-width: 980px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
+}
 </style>

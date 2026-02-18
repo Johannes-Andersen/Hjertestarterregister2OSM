@@ -11,8 +11,7 @@ interface Props {
 const { issues, emptyText = "No current issues." } = Astro.props;
 ---
 
-{
-  issues.length ? (
+{issues.length ? (
     <div class="issues-grid">
       {issues.map((issue) => (
         <article class:list={["issue-card", issue.severity]}>
@@ -52,83 +51,82 @@ const { issues, emptyText = "No current issues." } = Astro.props;
     </div>
   ) : (
     <p class="empty">{emptyText}</p>
-  )
-}
+  )}
 
 <style>
+.issues-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.issue-card {
+  padding: 0.8rem;
+  background: #fff;
+  border: 1px solid #dbe3df;
+  border-radius: 0.9rem;
+}
+
+.issue-card.warning {
+  box-shadow: inset 4px 0 0 #c05e1d;
+}
+
+.issue-card.error {
+  box-shadow: inset 4px 0 0 #b42318;
+}
+
+.top-row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.type {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.type span {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.type code {
+  font-size: 0.75rem;
+  color: var(--ink-subtle);
+}
+
+.severity {
+  font-size: 0.72rem;
+  color: var(--ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.message {
+  margin: 0.3rem 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.issue-card ul {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  font-size: 0.87rem;
+  color: var(--ink-subtle);
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-subtle);
+}
+
+@media (max-width: 960px) {
   .issues-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.8rem;
+    grid-template-columns: 1fr;
   }
-
-  .issue-card {
-    border: 1px solid #dbe3df;
-    border-radius: 0.9rem;
-    padding: 0.8rem;
-    background: #fff;
-  }
-
-  .issue-card.warning {
-    box-shadow: inset 4px 0 0 #c05e1d;
-  }
-
-  .issue-card.error {
-    box-shadow: inset 4px 0 0 #b42318;
-  }
-
-  .top-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.6rem;
-    margin-bottom: 0.35rem;
-  }
-
-  .type {
-    display: grid;
-    gap: 0.1rem;
-  }
-
-  .type span {
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  .type code {
-    color: var(--ink-subtle);
-    font-size: 0.75rem;
-  }
-
-  .severity {
-    text-transform: uppercase;
-    font-size: 0.72rem;
-    letter-spacing: 0.07em;
-    color: var(--ink-subtle);
-  }
-
-  .message {
-    margin: 0.3rem 0 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .issue-card ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 0.3rem;
-    font-size: 0.87rem;
-    color: var(--ink-subtle);
-  }
-
-  .empty {
-    margin: 0;
-    color: var(--ink-subtle);
-  }
-
-  @media (max-width: 960px) {
-    .issues-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+}
 </style>

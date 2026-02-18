@@ -3,6 +3,7 @@
   "ui": "tui",
   "globalEnv": [
     "DRY",
+    "DEV",
     "OSM_AUTH_TOKEN",
     "HJERTESTARTERREGISTER_CLIENT_ID",
     "HJERTESTARTERREGISTER_CLIENT_SECRET",

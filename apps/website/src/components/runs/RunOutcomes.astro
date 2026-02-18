@@ -37,39 +37,39 @@ const { run } = Astro.props;
 </dl>
 
 <style>
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+}
+
+dl div {
+  padding: 0.7rem;
+  border: 1px solid #dbe3df;
+  border-radius: 0.7rem;
+}
+
+dt {
+  font-size: 0.84rem;
+  color: var(--ink-subtle);
+}
+
+dd {
+  margin: 0.3rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
   dl {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.7rem;
-    margin: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  dl div {
-    border: 1px solid #dbe3df;
-    border-radius: 0.7rem;
-    padding: 0.7rem;
+@media (max-width: 620px) {
+  dl {
+    grid-template-columns: 1fr;
   }
-
-  dt {
-    color: var(--ink-subtle);
-    font-size: 0.84rem;
-  }
-
-  dd {
-    margin: 0.3rem 0 0;
-    font-size: 1.2rem;
-    font-weight: 700;
-  }
-
-  @media (max-width: 980px) {
-    dl {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 620px) {
-    dl {
-      grid-template-columns: 1fr;
-    }
-  }
+}
 </style>
