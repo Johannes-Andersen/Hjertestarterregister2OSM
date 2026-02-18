@@ -18,8 +18,7 @@ const {
 } = Astro.props;
 ---
 
-{
-  runs.length ? (
+{runs.length ? (
     <div class="table-wrap">
       <table>
         <thead>
@@ -64,30 +63,29 @@ const {
     </div>
   ) : (
     <p class="empty">{emptyText}</p>
-  )
-}
+  )}
 
 <style>
-  .table-wrap {
-    overflow-x: auto;
-  }
+.table-wrap {
+  overflow-x: auto;
+}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
-  th,
-  td {
-    text-align: left;
-    padding: 0.6rem;
-    border-bottom: 1px solid #dbe3df;
-    font-size: 0.9rem;
-    white-space: nowrap;
-  }
+th,
+td {
+  padding: 0.6rem;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #dbe3df;
+}
 
-  .empty {
-    margin: 0.4rem 0;
-    color: var(--ink-subtle);
-  }
+.empty {
+  margin: 0.4rem 0;
+  color: var(--ink-subtle);
+}
 </style>

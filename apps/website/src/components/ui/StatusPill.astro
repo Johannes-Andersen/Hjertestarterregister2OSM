@@ -11,28 +11,28 @@ const { status } = Astro.props;
 <span class:list={["pill", status]}>{status}</span>
 
 <style>
-  .pill {
-    display: inline-flex;
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
+.pill {
+  display: inline-flex;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 999px;
+}
 
-  .pill.success {
-    background: #d7f2e8;
-    color: #126d53;
-  }
+.pill.success {
+  color: #126d53;
+  background: #d7f2e8;
+}
 
-  .pill.failed {
-    background: #fbe2df;
-    color: var(--error);
-  }
+.pill.failed {
+  color: var(--error);
+  background: #fbe2df;
+}
 
-  .pill.running {
-    background: #fdefd9;
-    color: var(--warning);
-  }
+.pill.running {
+  color: var(--warning);
+  background: #fdefd9;
+}
 </style>

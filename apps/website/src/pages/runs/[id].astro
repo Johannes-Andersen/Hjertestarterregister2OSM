@@ -32,8 +32,7 @@ if (!run) {
 ---
 
 <Layout title={`Run ${runId ?? "unknown"} | Hjertestarterregister2OSM`}>
-  {
-    run ? (
+  {run ? (
       <>
         <RunSummaryGrid run={run} />
 
@@ -55,13 +54,12 @@ if (!run) {
         <h2>Run not found</h2>
         <p>The requested run ID does not exist.</p>
       </Panel>
-    )
-  }
+    )}
 </Layout>
 
 <style>
-  .section-title {
-    margin-top: 0;
-    margin-bottom: 0.7rem;
-  }
+.section-title {
+  margin-top: 0;
+  margin-bottom: 0.7rem;
+}
 </style>

@@ -11,13 +11,10 @@ const isActivePath = (href: string) =>
 ---
 
 <header class="site-header">
-  <a class="brand" href="/">
-    <h1>Hjertestarterregister -> OSM</h1>
-  </a>
+  <a class="brand" href="/"> <h1>Hjertestarterregister -> OSM</h1> </a>
   <nav>
     <ul>
-      {
-        navItems.map((item) => (
+      {navItems.map((item) => (
           <li>
             <a
               href={item.href}
@@ -26,61 +23,60 @@ const isActivePath = (href: string) =>
               {item.label}
             </a>
           </li>
-        ))
-      }
+        ))}
     </ul>
   </nav>
 </header>
 
 <style>
-  .site-header {
-    padding: 1.5rem clamp(1rem, 3vw, 3rem);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: end;
-    justify-content: space-between;
-    position: relative;
-    z-index: 1;
-  }
+.site-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+  justify-content: space-between;
+  padding: 1.5rem clamp(1rem, 3vw, 3rem);
+}
 
-  .brand {
-    text-decoration: none;
-    color: var(--ink);
-  }
+.brand {
+  color: var(--ink);
+  text-decoration: none;
+}
 
-  .brand h1 {
-    margin: 0.2rem 0 0;
-    font-size: clamp(1.4rem, 2.5vw, 2rem);
-    font-weight: 700;
-  }
+.brand h1 {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 700;
+}
 
-  nav ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    gap: 0.7rem;
-  }
+nav ul {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
 
-  nav a {
-    display: inline-flex;
-    padding: 0.55rem 0.9rem;
-    border-radius: 999px;
-    text-decoration: none;
-    border: 1px solid transparent;
-    color: var(--ink-subtle);
-    font-weight: 600;
-  }
+nav a {
+  display: inline-flex;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+  color: var(--ink-subtle);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
 
-  nav a:hover {
-    border-color: var(--line);
-    background: rgba(255, 255, 255, 0.8);
-  }
+nav a:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--line);
+}
 
-  nav a.active {
-    color: var(--ink);
-    border-color: #9bc9bb;
-    background: var(--accent-soft);
-  }
+nav a.active {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: #9bc9bb;
+}
 </style>

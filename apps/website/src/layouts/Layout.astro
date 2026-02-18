@@ -18,56 +18,53 @@ const {
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="description" content={description} />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="description" content={description}>
     <Font cssVariable="--font-inter" preload />
     <title>{title}</title>
   </head>
   <body>
     <BackgroundShapes />
     <Header />
-    <main class="content">
-      <slot />
-    </main>
+    <main class="content"><slot /></main>
     <Footer />
   </body>
 </html>
 
 <style>
-  :root {
-    --bg-0: #f5f4ef;
-    --bg-1: #fdfcf8;
-    --ink: #1f2d2f;
-    --ink-subtle: #4f5f61;
-    --line: #ced6d3;
-    --accent: #007f5f;
-    --accent-soft: #dff5ec;
-    --error: #b42318;
-    --warning: #c05e1d;
-  }
+:root {
+  --bg-0: #f5f4ef;
+  --bg-1: #fdfcf8;
+  --ink: #1f2d2f;
+  --ink-subtle: #4f5f61;
+  --line: #ced6d3;
+  --accent: #007f5f;
+  --accent-soft: #dff5ec;
+  --error: #b42318;
+  --warning: #c05e1d;
+}
 
-  * {
-    box-sizing: border-box;
-  }
+* {
+  box-sizing: border-box;
+}
 
-  html,
-  body {
-    margin: 0;
-    min-height: 100%;
-    background:
-      radial-gradient(circle at 10% 10%, #fcf2df 0%, transparent 42%),
-      radial-gradient(circle at 95% 0%, #d9f5eb 0%, transparent 35%),
-      var(--bg-0);
-    color: var(--ink);
-    font-family: var(--font-inter);
-  }
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  font-family: var(--font-inter);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 10%, #fcf2df 0%, transparent 42%),
+    radial-gradient(circle at 95% 0%, #d9f5eb 0%, transparent 35%), var(--bg-0);
+}
 
-  .content {
-    padding: 0 clamp(1rem, 3vw, 3rem) 2.5rem;
-    position: relative;
-    z-index: 1;
-  }
+.content {
+  position: relative;
+  z-index: 1;
+  padding: 0 clamp(1rem, 3vw, 3rem) 2.5rem;
+}
 </style>

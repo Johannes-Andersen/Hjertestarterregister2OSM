@@ -16,6 +16,9 @@
       "recommended": true,
       "nursery": {
         "noUndeclaredEnvVars": "error"
+      },
+      "complexity": {
+        "noUselessFragments": "off"
       }
     }
   },
@@ -24,7 +27,10 @@
     "actions": {
       "recommended": true,
       "source": {
-        "useSortedProperties": "on"
+        "recommended": true,
+        "useSortedProperties": "on",
+        "noDuplicateClasses": "on",
+        "organizeImports": "on"
       }
     }
   },
@@ -34,16 +40,34 @@
     "lineEnding": "lf",
     "indentStyle": "space"
   },
-  "overrides": [
-    {
-      "includes": ["**/*.astro"],
-      "formatter": {
-        "enabled": false
-      },
-      "linter": {
-        "enabled": false
-      }
+  "javascript": {
+    "experimentalEmbeddedSnippetsEnabled": true,
+    "formatter": {
+      "enabled": true
     },
+    "assist": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
+  "html": {
+    "experimentalFullSupportEnabled": true,
+    "formatter": {
+      "enabled": true
+    },
+    "assist": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "parser": {
+      "interpolation": true
+    }
+  },
+  "overrides": [
     {
       "includes": ["**/worker-configuration.d.ts"],
       "formatter": {
