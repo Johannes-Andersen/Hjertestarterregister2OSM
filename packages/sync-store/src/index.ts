@@ -6,6 +6,7 @@ export type {
   SyncIssueSeverity,
   SyncIssueType,
   SyncIssueTypeCount,
+  SyncOsmElementType,
   SyncOverviewRunData,
   SyncOverviewStats,
   SyncRunCounters,

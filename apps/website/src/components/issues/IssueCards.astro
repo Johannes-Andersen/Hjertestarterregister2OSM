@@ -2,6 +2,7 @@
 import type { SyncRunIssueListItem } from "@repo/sync-store";
 import { issueTypeLabels } from "../../utils/constants";
 import { formatDateTime } from "../../utils/formatDateTime";
+import { getOsmIssueLink } from "../../utils/getOsmIssueLink";
 
 interface Props {
   issues: SyncRunIssueListItem[];
@@ -13,41 +14,41 @@ const { issues, emptyText = "No current issues." } = Astro.props;
 
 {issues.length ? (
     <div class="issues-grid">
-      {issues.map((issue) => (
-        <article class:list={["issue-card", issue.severity]}>
-          <div class="top-row">
-            <div class="type">
-              <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
-              <code>{issue.issueType}</code>
+      {issues.map((issue) => {
+        const osmIssueLink = getOsmIssueLink(issue);
+
+        return (
+          <article class:list={["issue-card", issue.severity]}>
+            <div class="top-row">
+              <div class="type">
+                <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
+                <code>{issue.issueType}</code>
+              </div>
+              <span class="severity">{issue.severity}</span>
             </div>
-            <span class="severity">{issue.severity}</span>
-          </div>
-          <p class="message">{issue.message}</p>
-          <ul>
-            <li>
-              <strong>Run:</strong> <a href={`/runs/${issue.runId}`}>
-                {issue.runId.slice(0, 8)}...
-              </a>
-            </li>
-            <li><strong>Created:</strong> {formatDateTime(issue.createdAt)}</li>
-            <li><strong>Register ref:</strong> {issue.registerRef ?? "-"}</li>
-            <li>
-              <strong>OSM node:</strong>
-              {issue.osmNodeId ? (
-                <a
-                  href={`https://www.openstreetmap.org/node/${issue.osmNodeId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {issue.osmNodeId}
+            <p class="message">{issue.message}</p>
+            <ul>
+              <li>
+                <strong>Run:</strong> <a href={`/runs/${issue.runId}`}>
+                  {issue.runId.slice(0, 8)}...
                 </a>
-              ) : (
-                " -"
-              )}
-            </li>
-          </ul>
-        </article>
-      ))}
+              </li>
+              <li><strong>Created:</strong> {formatDateTime(issue.createdAt)}</li>
+              <li><strong>Register ref:</strong> {issue.registerRef ?? "-"}</li>
+              <li>
+                <strong>OSM element:</strong>
+                {osmIssueLink ? (
+                  <a href={osmIssueLink.href} target="_blank" rel="noreferrer">
+                    {osmIssueLink.label}
+                  </a>
+                ) : (
+                  " -"
+                )}
+              </li>
+            </ul>
+          </article>
+        );
+      })}
     </div>
   ) : (
     <p class="empty">{emptyText}</p>

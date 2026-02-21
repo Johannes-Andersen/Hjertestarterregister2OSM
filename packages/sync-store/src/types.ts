@@ -13,6 +13,8 @@ export type SyncIssueType =
   | "skipped_create_nearby"
   | "skipped_delete_not_aed_only";
 
+export type SyncOsmElementType = "node" | "way" | "relation";
+
 export interface SyncRunMetrics {
   registryAeds: number;
   osmAeds: number;
@@ -78,6 +80,7 @@ export interface SyncRunIssueListItem {
   message: string;
   registerRef: string | null;
   osmNodeId: number | null;
+  osmElementType: SyncOsmElementType | null;
   createdAt: Date;
 }
 

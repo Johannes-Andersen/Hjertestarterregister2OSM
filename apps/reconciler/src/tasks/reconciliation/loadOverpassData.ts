@@ -48,6 +48,9 @@ export const loadOverpassData = async ({
           severity: "error",
           message: `OSM element with id ${element.id} is of type ${element.type} and will be skipped.`,
           osmNodeId: element.id,
+          details: {
+            osmElementType: element.type,
+          },
         },
       });
     }

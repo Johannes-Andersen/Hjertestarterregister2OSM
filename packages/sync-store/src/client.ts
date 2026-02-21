@@ -181,6 +181,13 @@ export class SyncStoreClient {
           message,
           register_ref as "registerRef",
           osm_node_id as "osmNodeId",
+          CASE
+            WHEN osm_node_id IS NULL THEN NULL
+            WHEN issue_type <> 'osm_not_a_node' THEN 'node'
+            WHEN details->>'osmElementType' IN ('node', 'way', 'relation')
+              THEN details->>'osmElementType'
+            ELSE NULL
+          END as "osmElementType",
           created_at as "createdAt"
         FROM sync_run_issues
         WHERE run_id = ${options.runId}
@@ -197,6 +204,13 @@ export class SyncStoreClient {
         message,
         register_ref as "registerRef",
         osm_node_id as "osmNodeId",
+        CASE
+          WHEN osm_node_id IS NULL THEN NULL
+          WHEN issue_type <> 'osm_not_a_node' THEN 'node'
+          WHEN details->>'osmElementType' IN ('node', 'way', 'relation')
+            THEN details->>'osmElementType'
+          ELSE NULL
+        END as "osmElementType",
         created_at as "createdAt"
       FROM sync_run_issues
       ORDER BY created_at DESC

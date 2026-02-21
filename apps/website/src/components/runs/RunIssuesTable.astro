@@ -1,6 +1,7 @@
 ---
 import type { SyncRunIssueListItem } from "@repo/sync-store";
 import { issueTypeLabels } from "../../utils/constants";
+import { getOsmIssueLink } from "../../utils/getOsmIssueLink";
 
 interface Props {
   issues: SyncRunIssueListItem[];
@@ -23,29 +24,29 @@ const { issues, emptyText = "No issues were recorded for this run." } =
           </tr>
         </thead>
         <tbody>
-          {issues.map((issue) => (
-            <tr>
-              <td>
-                <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
-                <code>{issue.issueType}</code>
-              </td>
-              <td>{issue.severity}</td>
-              <td>{issue.message}</td>
-              <td>
-                {issue.osmNodeId ? (
-                  <a
-                    href={`https://www.openstreetmap.org/node/${issue.osmNodeId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Node {issue.osmNodeId}
-                  </a>
-                ) : (
-                  "-"
-                )}
-              </td>
-            </tr>
-          ))}
+          {issues.map((issue) => {
+            const osmIssueLink = getOsmIssueLink(issue);
+
+            return (
+              <tr>
+                <td>
+                  <span>{issueTypeLabels[issue.issueType] ?? issue.issueType}</span>
+                  <code>{issue.issueType}</code>
+                </td>
+                <td>{issue.severity}</td>
+                <td>{issue.message}</td>
+                <td>
+                  {osmIssueLink ? (
+                    <a href={osmIssueLink.href} target="_blank" rel="noreferrer">
+                      {osmIssueLink.label}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
