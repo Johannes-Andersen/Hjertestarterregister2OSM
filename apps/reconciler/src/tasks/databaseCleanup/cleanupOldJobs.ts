@@ -14,20 +14,11 @@ export const cleanupOldJobs = async ({
   log.info("Starting cleanup of old jobs...");
 
   const cutoffDate = new Date(Date.now() - oldJobRetentionMs);
-  const oldJobs = await syncStore.listRunsCompletedBefore(cutoffDate);
+  const deletedCount = await syncStore.deleteRunsCompletedBefore(cutoffDate);
 
-  log.debug(
-    `Found ${oldJobs.length} older jobs older than cutoff (${cutoffDate.toISOString()})`,
+  log.info(
+    `Deleted ${deletedCount} completed jobs older than cutoff (${cutoffDate.toISOString()})`,
   );
-
-  for (const job of oldJobs) {
-    try {
-      await syncStore.deleteRun(job.id);
-      log.info({ job }, `Deleted old job ${job.id}`);
-    } catch (err) {
-      log.error({ err, job }, `Failed to delete old job ${job.id}`);
-    }
-  }
 
   log.info("Cleanup of old jobs finished");
 };

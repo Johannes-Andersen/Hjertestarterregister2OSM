@@ -245,21 +245,15 @@ export class SyncStoreClient {
     `;
   }
 
-  async listRunsCompletedBefore(cutoffDate: Date): Promise<SyncRunListItem[]> {
-    return this.sql<SyncRunListItem[]>`
-      SELECT
-        id,
-        started_at as "startedAt",
-        finished_at as "finishedAt",
-        status,
-        mode,
-        updated_count as "updated",
-        created_count as "created",
-        deleted_count as "deleted"
+  async deleteRunsCompletedBefore(cutoffDate: Date): Promise<number> {
+    const deletedRows = await this.sql<{ id: string }[]>`
+      DELETE
       FROM sync_runs
       WHERE finished_at < ${cutoffDate}
-      ORDER BY finished_at ASC
+      RETURNING id
     `;
+
+    return deletedRows.length;
   }
 
   async listIssueTypeCounts(
