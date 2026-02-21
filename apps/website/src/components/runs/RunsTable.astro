@@ -7,15 +7,10 @@ import StatusPill from "../ui/StatusPill.astro";
 
 interface Props {
   runs: SyncRunListItem[];
-  includeSkippedColumns?: boolean;
   emptyText?: string;
 }
 
-const {
-  runs,
-  includeSkippedColumns = false,
-  emptyText = "No runs found.",
-} = Astro.props;
+const { runs, emptyText = "No runs found." } = Astro.props;
 ---
 
 {runs.length ? (
@@ -30,9 +25,6 @@ const {
             <th>Updated</th>
             <th>Created</th>
             <th>Deleted</th>
-            {includeSkippedColumns ? <th>Skipped nearby</th> : null}
-            {includeSkippedColumns ? <th>Skipped delete</th> : null}
-            <th>Unchanged</th>
           </tr>
         </thead>
         <tbody>
@@ -49,13 +41,6 @@ const {
               <td>{formatNumber(run.updated)}</td>
               <td>{formatNumber(run.created)}</td>
               <td>{formatNumber(run.deleted)}</td>
-              {includeSkippedColumns ? (
-                <td>{formatNumber(run.skippedCreateNearby)}</td>
-              ) : null}
-              {includeSkippedColumns ? (
-                <td>{formatNumber(run.skippedDeleteNotAedOnly)}</td>
-              ) : null}
-              <td>{formatNumber(run.unchanged)}</td>
             </tr>
           ))}
         </tbody>

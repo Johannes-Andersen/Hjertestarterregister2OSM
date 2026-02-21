@@ -24,10 +24,6 @@ const runs = await syncStore.listRecentRuns(200);
       </div>
       <span>{formatNumber(runs.length)} shown</span>
     </Fragment>
-    <RunsTable
-      runs={runs}
-      includeSkippedColumns={true}
-      emptyText="No runs found."
-    />
+    <RunsTable runs={runs} emptyText="No runs found." />
   </Panel>
 </Layout>

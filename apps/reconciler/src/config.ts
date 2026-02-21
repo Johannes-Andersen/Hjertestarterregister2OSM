@@ -53,8 +53,8 @@ export const changesetConfig = {
 export const reconcilerConfig = {
   mode: env.DRY === "false" ? "live" : "dry-run",
   changedLocationDistanceMeters: 50,
-  unmanagedMergeDistanceMeters: 20,
-  nearbyAedDistanceMeters: 20,
+  unmanagedMergeDistanceMeters: 15,
+  nearbyAedDistanceMeters: 50,
   maxDeleteFraction: 0.5,
   previewOscOutputPath: `${import.meta.dirname}/../out/dry-run-changes.osc`,
   previewGeojsonOutputPath: `${import.meta.dirname}/../out/dry-run-changes.geojson`,

@@ -22,18 +22,6 @@ const { run } = Astro.props;
     <dt>Deleted</dt>
     <dd>{formatNumber(run.deleted)}</dd>
   </div>
-  <div>
-    <dt>Skipped create nearby</dt>
-    <dd>{formatNumber(run.skippedCreateNearby)}</dd>
-  </div>
-  <div>
-    <dt>Skipped delete non-AED</dt>
-    <dd>{formatNumber(run.skippedDeleteNotAedOnly)}</dd>
-  </div>
-  <div>
-    <dt>Unchanged</dt>
-    <dd>{formatNumber(run.unchanged)}</dd>
-  </div>
 </dl>
 
 <style>

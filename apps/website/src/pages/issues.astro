@@ -13,9 +13,13 @@ const syncStore = new SyncStoreClient({
   ssl: import.meta.env.DEV ? "require" : false,
 });
 
+const latestRunId = await syncStore.getLatestRunId();
+
+const runFilter = latestRunId ? { runId: latestRunId } : {};
+
 const [issues, issueTypeCounts] = await Promise.all([
-  syncStore.listRunIssues({ limit: 400 }),
-  syncStore.listIssueTypeCounts(),
+  syncStore.listRunIssues({ ...runFilter, limit: 400 }),
+  syncStore.listIssueTypeCounts(runFilter),
 ]);
 ---
 

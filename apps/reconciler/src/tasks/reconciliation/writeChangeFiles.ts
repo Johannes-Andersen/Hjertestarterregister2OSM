@@ -1,11 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { PlannedNode, ReconciliationChangePlan } from "./changePlan.ts";
+import type { ChangePlan, PlannedNode } from "@repo/osm-sdk";
+import type { Logger } from "pino";
+import { reconcilerConfig } from "../../config.ts";
 
-interface Arguments {
-  changePlan: ReconciliationChangePlan;
-  oscOutputPath: string;
-  geojsonOutputPath: string;
+interface WriteChangeFilesOptions {
+  logger: Logger;
+  changePlan: ChangePlan;
 }
 
 interface OutputPaths {
@@ -21,7 +22,9 @@ const xmlEscape = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 
-const sanitizeTags = (tags: Record<string, string | undefined>) => {
+const sanitizeTags = (
+  tags: Record<string, string | undefined>,
+): Record<string, string> => {
   const sanitized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(tags)) {
@@ -51,7 +54,7 @@ const renderNodeXml = (
   ];
 };
 
-const buildOsc = (changePlan: ReconciliationChangePlan) => {
+const buildOsc = (changePlan: ChangePlan): string => {
   const lines: string[] = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<osmChange version="0.6" generator="hjertestarterregister2osm planned-changes">',
@@ -88,7 +91,7 @@ type GeoJsonFeature = {
   properties: Record<string, string | number>;
 };
 
-const buildGeoJson = (changePlan: ReconciliationChangePlan) => {
+const buildGeoJson = (changePlan: ChangePlan) => {
   const features: GeoJsonFeature[] = [];
 
   for (const change of changePlan.create) {
@@ -100,7 +103,6 @@ const buildGeoJson = (changePlan: ReconciliationChangePlan) => {
       },
       properties: {
         _operation: "create",
-        _register_id: change.registerId,
         _osm_id: change.node.id,
         ...sanitizeTags(change.node.tags),
       },
@@ -116,7 +118,6 @@ const buildGeoJson = (changePlan: ReconciliationChangePlan) => {
       },
       properties: {
         _operation: "modify",
-        _register_id: change.registerId,
         _osm_id: change.after.id,
         _from_lat: change.before.lat,
         _from_lon: change.before.lon,
@@ -134,7 +135,6 @@ const buildGeoJson = (changePlan: ReconciliationChangePlan) => {
       },
       properties: {
         _operation: "delete",
-        _register_id: change.registerId,
         _osm_id: change.node.id,
         ...sanitizeTags(change.node.tags),
       },
@@ -147,18 +147,54 @@ const buildGeoJson = (changePlan: ReconciliationChangePlan) => {
   };
 };
 
-export const writePlannedChangeFiles = async ({
-  changePlan,
-  oscOutputPath,
-  geojsonOutputPath,
-}: Arguments): Promise<OutputPaths> => {
-  const oscPath = resolve(process.cwd(), oscOutputPath);
-  const geojsonPath = resolve(process.cwd(), geojsonOutputPath);
+const assignCreateNodeIds = (changePlan: ChangePlan): ChangePlan => {
+  let nextId = -1;
+
+  return {
+    ...changePlan,
+    create: changePlan.create.map((change) => ({
+      ...change,
+      node: {
+        ...change.node,
+        id: change.node.id === -1 ? nextId-- : change.node.id,
+      },
+    })),
+  };
+};
+
+/**
+ * Merge multiple ChangePlans into a single combined plan.
+ */
+const mergeChangePlans = (plans: ChangePlan[]): ChangePlan => ({
+  create: plans.flatMap((p) => p.create),
+  modify: plans.flatMap((p) => p.modify),
+  delete: plans.flatMap((p) => p.delete),
+});
+
+export const writeChangeFiles = async ({
+  logger,
+  changePlan: rawChangePlan,
+}: WriteChangeFilesOptions): Promise<OutputPaths> => {
+  const log = logger.child({ task: "writeChangeFiles" });
+  log.info("Writing change files to disk");
+
+  const changePlan = assignCreateNodeIds(rawChangePlan);
+
+  const oscPath = resolve(process.cwd(), reconcilerConfig.previewOscOutputPath);
+  const geojsonPath = resolve(
+    process.cwd(),
+    reconcilerConfig.previewGeojsonOutputPath,
+  );
 
   await Promise.all([
     mkdir(dirname(oscPath), { recursive: true }),
     mkdir(dirname(geojsonPath), { recursive: true }),
   ]);
+
+  const hasChanges =
+    changePlan.create.length > 0 ||
+    changePlan.modify.length > 0 ||
+    changePlan.delete.length > 0;
 
   await Promise.all([
     writeFile(oscPath, buildOsc(changePlan), "utf8"),
@@ -169,5 +205,19 @@ export const writePlannedChangeFiles = async ({
     ),
   ]);
 
+  log.info(
+    {
+      oscPath,
+      geojsonPath,
+      hasChanges,
+      creates: changePlan.create.length,
+      modifies: changePlan.modify.length,
+      deletes: changePlan.delete.length,
+    },
+    "Change files written to disk",
+  );
+
   return { oscPath, geojsonPath };
 };
+
+export { mergeChangePlans };

@@ -26,13 +26,6 @@ export const hasStandaloneConflictTags = (
   return Object.keys(tags).some((key) => standaloneConflictTagKeys.has(key));
 };
 
-export const listStandaloneConflictTagKeys = (
-  tags: Record<string, string> | undefined,
-) => {
-  if (!tags) return [];
-  return Object.keys(tags).filter((key) => standaloneConflictTagKeys.has(key));
-};
-
 export const buildStandaloneStripTagUpdates = (
   tags: Record<string, string> | undefined,
 ) => {

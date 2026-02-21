@@ -14,11 +14,15 @@ const syncStore = new SyncStoreClient({
   ssl: import.meta.env.DEV ? "require" : false,
 });
 
-const [overview, recentRuns, openIssueTypeCounts] = await Promise.all([
+const [overview, recentRuns, latestRunId] = await Promise.all([
   syncStore.getOverviewStats(),
   syncStore.listRecentRuns(6),
-  syncStore.listIssueTypeCounts(),
+  syncStore.getLatestRunId(),
 ]);
+
+const openIssueTypeCounts = await syncStore.listIssueTypeCounts(
+  latestRunId ? { runId: latestRunId } : {},
+);
 
 const baselineRun = overview.latestSuccessfulRun ?? overview.latestRun;
 ---

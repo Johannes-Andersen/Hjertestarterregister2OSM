@@ -11,9 +11,6 @@ CREATE TABLE sync_runs (
   updated_count INTEGER NOT NULL DEFAULT 0,
   created_count INTEGER NOT NULL DEFAULT 0,
   deleted_count INTEGER NOT NULL DEFAULT 0,
-  skipped_create_nearby_count INTEGER NOT NULL DEFAULT 0,
-  skipped_delete_not_aed_only_count INTEGER NOT NULL DEFAULT 0,
-  unchanged_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

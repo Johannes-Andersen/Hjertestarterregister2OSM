@@ -17,7 +17,7 @@ export const cleanupOldJobs = async ({
   const oldJobs = await syncStore.listRunsCompletedBefore(cutoffDate);
 
   log.debug(
-    `Found ${oldJobs.length} older (cutoff: ${cutoffDate.toISOString()})`,
+    `Found ${oldJobs.length} older jobs older than cutoff (${cutoffDate.toISOString()})`,
   );
 
   for (const job of oldJobs) {

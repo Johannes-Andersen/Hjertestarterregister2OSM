@@ -6,10 +6,9 @@ export type SyncIssueSeverity = "warning" | "error";
 
 export type SyncIssueType =
   | "register_aed_outside_norway"
-  | "osm_node_missing_ref"
+  | "register_missing_required_data"
+  | "osm_not_a_node"
   | "osm_node_note_opt_out"
-  | "osm_duplicate_register_ref"
-  | "aed_split_non_standalone_node"
   | "managed_node_location_within_tolerance"
   | "skipped_create_nearby"
   | "skipped_delete_not_aed_only";
@@ -21,9 +20,6 @@ export interface SyncRunMetrics {
   updated: number;
   created: number;
   deleted: number;
-  skippedCreateNearby: number;
-  skippedDeleteNotAedOnly: number;
-  unchanged: number;
 }
 
 export interface NewSyncIssue {
@@ -32,7 +28,7 @@ export interface NewSyncIssue {
   message: string;
   registerRef?: string;
   osmNodeId?: number;
-  details?: Record<string, unknown>;
+  details?: Record<string, string | number | boolean | null | undefined>;
 }
 
 export interface SyncStoreClientOptions {
@@ -47,9 +43,6 @@ export interface SyncRunCounters {
   updated: number;
   created: number;
   deleted: number;
-  skippedCreateNearby: number;
-  skippedDeleteNotAedOnly: number;
-  unchanged: number;
 }
 
 export interface SyncRunRecord extends SyncRunCounters {
