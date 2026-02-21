@@ -108,6 +108,13 @@ export class SyncStoreClient {
     }
   }
 
+  async deleteRun(runId: string): Promise<void> {
+    await this.sql`
+      DELETE FROM sync_runs
+      WHERE id = ${runId}
+    `;
+  }
+
   async replaceRunIssues(input: {
     runId: string;
     issues: NewSyncIssue[];
@@ -223,6 +230,37 @@ export class SyncStoreClient {
       FROM sync_runs
       ORDER BY started_at DESC
       LIMIT ${normalizedLimit}
+    `;
+  }
+
+  async listRunningRuns(): Promise<Pick<SyncRunRecord, "id" | "startedAt">[]> {
+    return this.sql<Pick<SyncRunRecord, "id" | "startedAt">[]>`
+      SELECT
+        id,
+        started_at as "startedAt"
+      FROM sync_runs
+      WHERE status = 'running'
+      ORDER BY started_at ASC
+    `;
+  }
+
+  async listRunsCompletedBefore(cutoffDate: Date): Promise<SyncRunListItem[]> {
+    return this.sql<SyncRunListItem[]>`
+      SELECT
+        id,
+        started_at as "startedAt",
+        finished_at as "finishedAt",
+        status,
+        mode,
+        updated_count as "updated",
+        created_count as "created",
+        deleted_count as "deleted",
+        skipped_create_nearby_count as "skippedCreateNearby",
+        skipped_delete_not_aed_only_count as "skippedDeleteNotAedOnly",
+        unchanged_count as "unchanged"
+      FROM sync_runs
+      WHERE finished_at < ${cutoffDate}
+      ORDER BY finished_at ASC
     `;
   }
 

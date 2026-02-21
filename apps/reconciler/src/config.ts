@@ -10,6 +10,10 @@ const envSchema = z.object({
   HJERTESTARTERREGISTER_API_BASE_URL: z.string().trim().min(1).optional(),
   HJERTESTARTERREGISTER_OAUTH_TOKEN_URL: z.string().trim().min(1).optional(),
   DATABASE_URL: z.string().trim().min(1),
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+    .optional()
+    .default("debug"),
 });
 
 const env = envSchema.parse(process.env);
@@ -25,6 +29,13 @@ const outputDir = `${currentDir}/../out`;
 const version = packageJson.version;
 
 export const runtimeEnv = env;
+
+export const logLevel = env.LOG_LEVEL;
+
+export const databaseCleanupConfig = {
+  stuckJobTimeoutMs: 60 * 60 * 3 * 1000, // 3 hours
+  oldJobRetentionMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+} as const;
 
 export const overpassConfig = {
   apiUrl: "https://overpass-api.de/api/interpreter",

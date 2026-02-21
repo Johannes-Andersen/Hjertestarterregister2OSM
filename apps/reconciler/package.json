@@ -7,12 +7,14 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@types/node": "25.2.3",
     "@repo/hjertestarterregister-sdk": "workspace:*",
-    "@repo/overpass-sdk": "workspace:*",
     "@repo/osm-sdk": "workspace:*",
+    "@repo/overpass-sdk": "workspace:*",
     "@repo/sync-store": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "25.2.3",
+    "pino": "10.3.1",
+    "pino-pretty": "13.1.3",
     "zod": "4.3.6"
   }
 }

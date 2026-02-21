@@ -1,9 +1,9 @@
 import type { NewSyncIssue, SyncRunMetrics } from "@repo/sync-store";
-import { syncStore } from "./clients/syncStore.ts";
-import { reconcilerConfig } from "./config.ts";
-import { executeChangePlan } from "./reconciliation/executeChangePlan.ts";
-import { runReconciliation } from "./reconciliation/runReconciliation.ts";
-import { toErrorMessage } from "./utils/toErrorMessage.ts";
+import { syncStore } from "../clients/syncStore.ts";
+import { reconcilerConfig } from "../config.ts";
+import { executeChangePlan } from "../reconciliation/executeChangePlan.ts";
+import { runReconciliation } from "../reconciliation/runReconciliation.ts";
+import { toErrorMessage } from "../utils/toErrorMessage.ts";
 
 export const runReconciler = async () => {
   const mode = reconcilerConfig.mode;

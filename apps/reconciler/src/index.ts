@@ -1,6 +1,13 @@
-import { runReconciler } from "./runReconciler.ts";
+import { databaseCleanup } from "./tasks/databaseCleanup.ts";
+import { runReconciler } from "./tasks/runReconciler.ts";
 
-runReconciler().catch((error) => {
+const main = async () => {
+  await databaseCleanup();
+
+  await runReconciler();
+};
+
+main().catch((error) => {
   console.error("Reconciler failed:", error);
   process.exitCode = 1;
 });
