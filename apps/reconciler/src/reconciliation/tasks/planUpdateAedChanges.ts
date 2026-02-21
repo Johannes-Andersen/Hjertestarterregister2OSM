@@ -2,10 +2,10 @@ import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
 import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
 import { osmClient } from "../../clients/osmClient.ts";
 import { reconcilerConfig } from "../../config.ts";
-import type { ReconciliationChangePlan } from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
+import { logger } from "../../utils/logger.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
 import { buildNodeElementIndex } from "../../utils/nearbyElements.ts";
 import {
@@ -14,8 +14,7 @@ import {
   hasStandaloneConflictTags,
   listStandaloneConflictTagKeys,
 } from "../../utils/standaloneAed.ts";
-
-const registerRefTag = "ref:hjertestarterregister";
+import type { ReconciliationChangePlan } from "../plan/changePlan.ts";
 
 interface PlanUpdateAedChangesArgs {
   mode: SyncRunMode;
@@ -28,6 +27,9 @@ interface PlanUpdateAedChangesArgs {
   issues: NewSyncIssue[];
 }
 
+const log = logger.child({ task: "planUpdateAedChanges" });
+
+const registerRefTag = "ref:hjertestarterregister";
 const locationDifferenceEpsilonMeters = 0.01;
 
 const getTagUpdates = ({
@@ -144,8 +146,8 @@ export const planUpdateAedChanges = async ({
       summary.updated++;
       summary.created++;
 
-      console.log(
-        `${mode === "dry-run" ? "[dry] Would split" : "Planned split"} non-standalone node ${node.id} for register AED ${registerAed.ASSET_GUID}`,
+      log.debug(
+        `Planned split non-standalone node ${node.id} for register AED ${registerAed.ASSET_GUID}`,
       );
 
       continue;
@@ -217,8 +219,8 @@ export const planUpdateAedChanges = async ({
       tagUpdates,
     });
 
-    console.log(
-      `${mode === "dry-run" ? "[dry] Would update" : "Planned update"} node ${node.id} for register AED ${registerAed.ASSET_GUID}`,
+    log.debug(
+      `Planned update node ${node.id} for register AED ${registerAed.ASSET_GUID}`,
     );
 
     const elementIndex = nodeElementIndex.get(node.id);

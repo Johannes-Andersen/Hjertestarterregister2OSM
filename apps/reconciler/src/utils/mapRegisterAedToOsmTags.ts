@@ -1,5 +1,8 @@
 import type { AedTags } from "../types/aedTags.ts";
 import type { RegisterAed } from "../types/registerAed.ts";
+import { logger } from "./logger.ts";
+
+const log = logger.child({ util: "mapRegisterAedToOsmTags" });
 
 /** OSM enforces a 255 unicode character limit on tag values */
 const OSM_MAX_TAG_VALUE_LENGTH = 255;
@@ -15,7 +18,7 @@ const validateTagValue = (
 ): string | null => {
   if (value.length <= OSM_MAX_TAG_VALUE_LENGTH) return value;
 
-  console.warn(
+  log.warn(
     `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${value.length} chars)`,
   );
   return null;

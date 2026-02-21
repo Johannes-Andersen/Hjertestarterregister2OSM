@@ -1,21 +1,18 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
-import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
+import type { NewSyncIssue } from "@repo/sync-store";
 import { osmClient } from "../../clients/osmClient.ts";
-import type {
-  PlannedNode,
-  ReconciliationChangePlan,
-} from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
 import type { DuplicateRefGroup } from "../../utils/filterDuplicates.ts";
 import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
+import { logger } from "../../utils/logger.ts";
 import { pruneDeletedNodesFromElements } from "../../utils/nearbyElements.ts";
+import type { ReconciliationChangePlan } from "../plan/changePlan.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 
 interface PlanResolveDuplicateAedChangesArgs {
-  mode: SyncRunMode;
   managedAedNodes: OverpassNode[];
   duplicateRefGroups: DuplicateRefGroup[];
   registerAedsById: Map<string, RegisterAed>;
@@ -29,13 +26,7 @@ interface PlanResolveDuplicateAedChangesResult {
   deduplicatedManagedNodes: OverpassNode[];
 }
 
-const createPlannedNode = (node: OverpassNode): PlannedNode => ({
-  id: node.id,
-  lat: node.lat,
-  lon: node.lon,
-  version: node.version,
-  tags: { ...(node.tags ?? {}) },
-});
+const log = logger.child({ task: "planResolveDuplicateAedChanges" });
 
 const sortDuplicateNodes = ({
   nodes,
@@ -61,16 +52,13 @@ const sortDuplicateNodes = ({
         },
       );
 
-      if (leftDistance !== rightDistance) {
-        return leftDistance - rightDistance;
-      }
+      if (leftDistance !== rightDistance) return leftDistance - rightDistance;
     }
 
     return left.id - right.id;
   });
 
 export const planResolveDuplicateAedChanges = async ({
-  mode,
   managedAedNodes,
   duplicateRefGroups,
   registerAedsById,
@@ -96,76 +84,46 @@ export const planResolveDuplicateAedChanges = async ({
     });
     const [keepNode] = sortedNodes;
 
-    if (keepNode) {
-      deduplicatedManagedNodes.push(keepNode);
-    }
+    if (keepNode) deduplicatedManagedNodes.push(keepNode);
 
     const nodesToDelete = keepNode ? sortedNodes.slice(1) : [];
 
     for (const nodeToDelete of nodesToDelete) {
-      let deletionCandidateNode: PlannedNode;
+      const liveNode = await osmClient.getNodeFeature(nodeToDelete.id);
+      if (!isAedOnlyNode(liveNode)) {
+        summary.skippedDeleteNotAedOnly++;
+        issues.push({
+          type: "skipped_delete_not_aed_only",
+          severity: "warning",
+          message: `Skipped duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
+          registerRef: ref,
+          osmNodeId: nodeToDelete.id,
+          details: {
+            tags: liveNode.tags ?? {},
+            reason: "duplicate_ref_resolution",
+          },
+        });
+        log.warn(
+          nodeToDelete,
+          `Skipping duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
+        );
+        continue;
+      }
 
-      if (mode === "dry-run") {
-        if (!isAedOnlyNode(nodeToDelete)) {
-          summary.skippedDeleteNotAedOnly++;
-          issues.push({
-            type: "skipped_delete_not_aed_only",
-            severity: "warning",
-            message: `Skipped duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
-            registerRef: ref,
-            osmNodeId: nodeToDelete.id,
-            details: {
-              tags: nodeToDelete.tags ?? {},
-              reason: "duplicate_ref_resolution",
-            },
-          });
-          console.warn(
-            `Skipping duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
-          );
-          continue;
-        }
-
-        deletionCandidateNode = createPlannedNode(nodeToDelete);
-      } else {
-        const liveNode = await osmClient.getNodeFeature(nodeToDelete.id);
-        if (!isAedOnlyNode(liveNode)) {
-          summary.skippedDeleteNotAedOnly++;
-          issues.push({
-            type: "skipped_delete_not_aed_only",
-            severity: "warning",
-            message: `Skipped duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
-            registerRef: ref,
-            osmNodeId: nodeToDelete.id,
-            details: {
-              tags: liveNode.tags ?? {},
-              reason: "duplicate_ref_resolution",
-            },
-          });
-          console.warn(
-            `Skipping duplicate delete of node ${nodeToDelete.id} (${ref}): node has non-AED tags.`,
-          );
-          continue;
-        }
-
-        deletionCandidateNode = {
+      changePlan.delete.push({
+        registerId: ref,
+        node: {
           id: liveNode.id,
           lat: liveNode.lat,
           lon: liveNode.lon,
           version: liveNode.version,
           tags: { ...(liveNode.tags ?? {}) },
-        };
-      }
-
-      changePlan.delete.push({
-        registerId: ref,
-        node: deletionCandidateNode,
+        },
       });
       deletedDuplicateNodeIds.add(nodeToDelete.id);
       summary.deleted++;
 
-      console.log(
-        `${mode === "dry-run" ? "[dry] Would delete duplicate" : "Planned duplicate delete"} node ${nodeToDelete.id} (${ref})`,
-      );
+      log.debug(`Planned duplicate delete node ${nodeToDelete.id} (${ref})`);
     }
   }
 

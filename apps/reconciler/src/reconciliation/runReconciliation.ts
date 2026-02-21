@@ -6,20 +6,22 @@ import type {
 } from "@repo/sync-store";
 import { registerClient } from "../clients/registerClient.ts";
 import { reconcilerConfig } from "../config.ts";
+import type { ReconciliationSummary } from "../types/reconciliationSummary.ts";
+import { createReconciliationSummary } from "../utils/createReconciliationSummary.ts";
+import { reconciliationLogger } from "../utils/logger.ts";
+import { loadManagedOsmAeds } from "./loadManagedOsmAeds.ts";
+import { loadRegisterAeds } from "./loadRegisterAeds.ts";
 import {
   createReconciliationChangePlan,
   type ReconciliationChangePlan,
-} from "../plan/changePlan.ts";
-import type { ReconciliationSummary } from "../types/reconciliationSummary.ts";
-import { createReconciliationSummary } from "../utils/createReconciliationSummary.ts";
-import { loadManagedOsmAeds } from "./loadManagedOsmAeds.ts";
-import { loadRegisterAeds } from "./loadRegisterAeds.ts";
+} from "./plan/changePlan.ts";
 import { planCreateAedChanges } from "./tasks/planCreateAedChanges.ts";
 import { planDeleteAedChanges } from "./tasks/planDeleteAedChanges.ts";
 import { planLinkUnmanagedAedChanges } from "./tasks/planLinkUnmanagedAedChanges.ts";
 import { planResolveDuplicateAedChanges } from "./tasks/planResolveDuplicateAedChanges.ts";
 import { planUpdateAedChanges } from "./tasks/planUpdateAedChanges.ts";
 
+const log = reconciliationLogger.child({ module: "runReconciliation" });
 const defaultRegisterMaxRows = 50_000;
 
 const createMissingRefIssue = (node: OverpassNode): NewSyncIssue => ({
@@ -71,7 +73,7 @@ export const runReconciliation = async ({
   issues.push(...registerIssues);
   metrics.registryAeds = registerAedsById.size;
 
-  console.log(`Found ${registerAedsById.size} unique AEDs in register`);
+  log.debug(`Found ${registerAedsById.size} unique AEDs in register`);
 
   const summary = createReconciliationSummary();
   const changePlan = createReconciliationChangePlan();
@@ -81,7 +83,6 @@ export const runReconciliation = async ({
   }
   const elementsForNearbyChecks = [...elements];
   const { deduplicatedManagedNodes } = await planResolveDuplicateAedChanges({
-    mode,
     managedAedNodes: managedNodes,
     duplicateRefGroups,
     registerAedsById,
@@ -92,7 +93,6 @@ export const runReconciliation = async ({
   });
 
   await planDeleteAedChanges({
-    mode,
     managedAedNodes: deduplicatedManagedNodes,
     registerAedsById,
     elementsForNearbyChecks,
@@ -113,7 +113,6 @@ export const runReconciliation = async ({
   });
 
   const { linkedUnmanagedNodeIds } = planLinkUnmanagedAedChanges({
-    mode,
     unmanagedAedNodes: unmanagedNodes,
     registerAedsById,
     matchedRegisterIds,
@@ -129,7 +128,6 @@ export const runReconciliation = async ({
   }
 
   planCreateAedChanges({
-    mode,
     registerAedsById,
     matchedRegisterIds,
     elementsForNearbyChecks,

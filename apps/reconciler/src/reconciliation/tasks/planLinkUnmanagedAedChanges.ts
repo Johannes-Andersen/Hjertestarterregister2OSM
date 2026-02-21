@@ -1,10 +1,10 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
-import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
+import type { NewSyncIssue } from "@repo/sync-store";
 import { reconcilerConfig } from "../../config.ts";
-import type { ReconciliationChangePlan } from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
+import { reconciliationLogger } from "../../utils/logger.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
 import { buildNodeElementIndex } from "../../utils/nearbyElements.ts";
 import {
@@ -13,9 +13,9 @@ import {
   hasStandaloneConflictTags,
   listStandaloneConflictTagKeys,
 } from "../../utils/standaloneAed.ts";
+import type { ReconciliationChangePlan } from "../plan/changePlan.ts";
 
 interface PlanLinkUnmanagedAedChangesArgs {
-  mode: SyncRunMode;
   unmanagedAedNodes: OverpassNode[];
   registerAedsById: Map<string, RegisterAed>;
   matchedRegisterIds: Set<string>;
@@ -34,6 +34,8 @@ interface LinkCandidate {
   registerAed: RegisterAed;
   distanceMeters: number;
 }
+
+const log = reconciliationLogger.child({ task: "planLinkUnmanagedAedChanges" });
 
 const findUnmatchedRegisterAedsInRange = ({
   node,
@@ -65,7 +67,6 @@ const findUnmatchedRegisterAedsInRange = ({
 };
 
 export const planLinkUnmanagedAedChanges = ({
-  mode,
   unmanagedAedNodes,
   registerAedsById,
   matchedRegisterIds,
@@ -176,8 +177,8 @@ export const planLinkUnmanagedAedChanges = ({
       summary.updated++;
       summary.created++;
 
-      console.log(
-        `${mode === "dry-run" ? "[dry] Would split" : "Planned split"} non-standalone unmanaged node ${linkCandidate.node.id} for register AED ${linkCandidate.registerAed.ASSET_GUID}`,
+      log.debug(
+        `Planned split non-standalone unmanaged node ${linkCandidate.node.id} for register AED ${linkCandidate.registerAed.ASSET_GUID}`,
       );
 
       continue;
@@ -219,8 +220,8 @@ export const planLinkUnmanagedAedChanges = ({
     linkedUnmanagedNodeIds.add(linkCandidate.node.id);
     summary.updated++;
 
-    console.log(
-      `${mode === "dry-run" ? "[dry] Would auto-link" : "Planned auto-link"} unmanaged node ${linkCandidate.node.id} to register AED ${linkCandidate.registerAed.ASSET_GUID} (${linkCandidate.distanceMeters.toFixed(1)}m)`,
+    log.debug(
+      `Planned auto-link unmanaged node ${linkCandidate.node.id} to register AED ${linkCandidate.registerAed.ASSET_GUID} (${linkCandidate.distanceMeters.toFixed(1)}m)`,
     );
   }
 

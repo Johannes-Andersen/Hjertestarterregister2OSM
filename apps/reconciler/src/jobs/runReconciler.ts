@@ -3,7 +3,10 @@ import { syncStore } from "../clients/syncStore.ts";
 import { reconcilerConfig } from "../config.ts";
 import { executeChangePlan } from "../reconciliation/executeChangePlan.ts";
 import { runReconciliation } from "../reconciliation/runReconciliation.ts";
+import { reconciliationLogger } from "../utils/logger.ts";
 import { toErrorMessage } from "../utils/toErrorMessage.ts";
+
+const log = reconciliationLogger.child({ job: "runReconciler" });
 
 export const runReconciler = async () => {
   const mode = reconcilerConfig.mode;
@@ -12,7 +15,7 @@ export const runReconciler = async () => {
   const metrics: Partial<SyncRunMetrics> = {};
   let issuesPersisted = false;
 
-  console.log(`Running reconciler in ${mode} mode`);
+  log.info(`Started reconciliation run ${run.id}.`);
 
   try {
     const { changePlan, summary } = await runReconciliation({
@@ -38,8 +41,8 @@ export const runReconciler = async () => {
       metrics,
     });
 
-    console.log("Reconciliation summary:", summary);
-    console.log(`Stored run ${run.id} with ${issues.length} issues.`);
+    log.info(summary, "Reconciliation completed");
+    log.info(`Stored run ${run.id} with ${issues.length} issues`);
   } catch (error) {
     const errorMessage = toErrorMessage(error);
 
@@ -51,7 +54,7 @@ export const runReconciler = async () => {
         });
         issuesPersisted = true;
       } catch (storeIssueError) {
-        console.error("Failed to persist run issues:", storeIssueError);
+        log.error(storeIssueError, "Failed to persist run issues");
       }
     }
 
@@ -63,7 +66,7 @@ export const runReconciler = async () => {
         metrics,
       });
     } catch (storeRunError) {
-      console.error("Failed to mark run as failed:", storeRunError);
+      log.error(storeRunError, "Failed to mark run as failed");
     }
 
     throw error;
@@ -71,7 +74,7 @@ export const runReconciler = async () => {
     try {
       await syncStore.close();
     } catch (closeError) {
-      console.error("Failed to close sync-store connection:", closeError);
+      log.error(closeError, "Failed to close sync-store connection");
     }
   }
 };

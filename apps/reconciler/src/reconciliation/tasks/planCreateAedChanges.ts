@@ -1,14 +1,14 @@
 import type { OverpassElements } from "@repo/overpass-sdk";
-import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
+import type { NewSyncIssue } from "@repo/sync-store";
 import { reconcilerConfig } from "../../config.ts";
-import type { ReconciliationChangePlan } from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { findNearbyAed } from "../../utils/findNearbyAed.ts";
+import { reconciliationLogger } from "../../utils/logger.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
+import type { ReconciliationChangePlan } from "../plan/changePlan.ts";
 
 interface PlanCreateAedChangesArgs {
-  mode: SyncRunMode;
   registerAedsById: Map<string, RegisterAed>;
   matchedRegisterIds: Set<string>;
   elementsForNearbyChecks: OverpassElements[];
@@ -17,8 +17,9 @@ interface PlanCreateAedChangesArgs {
   issues: NewSyncIssue[];
 }
 
+const log = reconciliationLogger.child({ task: "planCreateAedChanges" });
+
 export const planCreateAedChanges = ({
-  mode,
   registerAedsById,
   matchedRegisterIds,
   elementsForNearbyChecks,
@@ -53,7 +54,7 @@ export const planCreateAedChanges = ({
           distanceMeters: Number(nearby.distanceMeters.toFixed(2)),
         },
       });
-      console.warn(
+      log.warn(
         `Skipping create of register AED ${registerAed.ASSET_GUID}: found nearby ${nearby.element.type} ${nearby.element.id} (${nearby.distanceMeters.toFixed(1)}m)`,
       );
       continue;
@@ -73,8 +74,8 @@ export const planCreateAedChanges = ({
       },
     });
 
-    console.log(
-      `${mode === "dry-run" ? "[dry] Would create" : "Planned create"} node for register AED ${registerAed.ASSET_GUID} at ${registerAed.SITE_LATITUDE},${registerAed.SITE_LONGITUDE}`,
+    log.debug(
+      `Planned create node for register AED ${registerAed.ASSET_GUID} at ${registerAed.SITE_LATITUDE},${registerAed.SITE_LONGITUDE}`,
     );
 
     summary.created++;

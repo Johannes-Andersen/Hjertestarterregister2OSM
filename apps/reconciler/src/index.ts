@@ -1,5 +1,8 @@
-import { databaseCleanup } from "./tasks/databaseCleanup.ts";
-import { runReconciler } from "./tasks/runReconciler.ts";
+import { databaseCleanup } from "./jobs/databaseCleanup.ts";
+import { runReconciler } from "./jobs/runReconciler.ts";
+import { logger } from "./utils/logger.ts";
+
+const log = logger.child({ module: "index" });
 
 const main = async () => {
   await databaseCleanup();
@@ -8,6 +11,6 @@ const main = async () => {
 };
 
 main().catch((error) => {
-  console.error("Reconciler failed:", error);
+  log.fatal(error, "Reconciler failed");
   process.exitCode = 1;
 });

@@ -8,6 +8,9 @@ import { getOsmAeds } from "../utils/getOsmAeds.ts";
 import { isManagedAed } from "../utils/isManagedAed.ts";
 import { isNodeOptedOut } from "../utils/isNodeOptedOut.ts";
 import { isOverpassNode } from "../utils/isOverpassNode.ts";
+import { logger } from "../utils/logger.ts";
+
+const log = logger.child({ module: "loadManagedOsmAeds" });
 
 interface ManagedOsmAedSnapshot {
   elements: OverpassElements[];
@@ -49,14 +52,14 @@ const createDuplicateRefIssue = ({
 export const loadManagedOsmAeds = async (): Promise<ManagedOsmAedSnapshot> => {
   const { elements } = await getOsmAeds();
 
-  console.log(`Found ${elements.length} AED elements`);
+  log.debug(`Found ${elements.length} AED elements`);
 
   const aedNodes = elements.filter(isOverpassNode);
   if (aedNodes.length === 0) {
     throw new Error("No AED nodes found");
   }
 
-  console.log(`Found ${aedNodes.length} AED nodes`);
+  log.debug(`Found ${aedNodes.length} AED nodes`);
 
   const managedNodes: OverpassNode[] = [];
   const unmanagedNodes: OverpassNode[] = [];
@@ -81,8 +84,8 @@ export const loadManagedOsmAeds = async (): Promise<ManagedOsmAedSnapshot> => {
     unmanagedNodes.push(node);
   }
 
-  console.log(`Found ${managedNodes.length} managed AED nodes`);
-  console.log(`Found ${unmanagedNodes.length} unmanaged AED nodes`);
+  log.debug(`Found ${managedNodes.length} managed AED nodes`);
+  log.debug(`Found ${unmanagedNodes.length} unmanaged AED nodes`);
 
   const duplicateFilterResult = filterDuplicates(managedNodes);
 
@@ -90,10 +93,10 @@ export const loadManagedOsmAeds = async (): Promise<ManagedOsmAedSnapshot> => {
     issues.push(createDuplicateRefIssue(duplicate));
   }
 
-  console.log(
+  log.debug(
     `Found ${duplicateFilterResult.uniqueNodes.length} unique managed AED nodes`,
   );
-  console.log(
+  log.debug(
     `Found ${duplicateFilterResult.duplicates.length} duplicate managed refs`,
   );
 

@@ -1,19 +1,16 @@
 import type { OverpassElements, OverpassNode } from "@repo/overpass-sdk";
-import type { NewSyncIssue, SyncRunMode } from "@repo/sync-store";
+import type { NewSyncIssue } from "@repo/sync-store";
 import { osmClient } from "../../clients/osmClient.ts";
-import type {
-  PlannedNode,
-  ReconciliationChangePlan,
-} from "../../plan/changePlan.ts";
 import type { ReconciliationSummary } from "../../types/reconciliationSummary.ts";
 import type { RegisterAed } from "../../types/registerAed.ts";
 import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
+import { reconciliationLogger } from "../../utils/logger.ts";
 import { pruneDeletedNodesFromElements } from "../../utils/nearbyElements.ts";
+import type { ReconciliationChangePlan } from "../plan/changePlan.ts";
 
 const registerRefTag = "ref:hjertestarterregister";
 
 interface PlanDeleteAedChangesArgs {
-  mode: SyncRunMode;
   managedAedNodes: OverpassNode[];
   registerAedsById: Map<string, RegisterAed>;
   elementsForNearbyChecks: OverpassElements[];
@@ -22,16 +19,9 @@ interface PlanDeleteAedChangesArgs {
   issues: NewSyncIssue[];
 }
 
-const createPlannedNode = (node: OverpassNode): PlannedNode => ({
-  id: node.id,
-  lat: node.lat,
-  lon: node.lon,
-  version: node.version,
-  tags: { ...(node.tags ?? {}) },
-});
+const log = reconciliationLogger.child({ task: "planDeleteAedChanges" });
 
 export const planDeleteAedChanges = async ({
-  mode,
   managedAedNodes,
   registerAedsById,
   elementsForNearbyChecks,
@@ -47,66 +37,40 @@ export const planDeleteAedChanges = async ({
 
     if (registerAedsById.has(ref)) continue;
 
-    let deletionCandidateNode: PlannedNode;
+    const liveNode = await osmClient.getNodeFeature(node.id);
+    if (!isAedOnlyNode(liveNode)) {
+      summary.skippedDeleteNotAedOnly++;
+      issues.push({
+        type: "skipped_delete_not_aed_only",
+        severity: "warning",
+        message: `Skipped delete of node ${node.id} (${ref}): node has non-AED tags.`,
+        registerRef: ref,
+        osmNodeId: node.id,
+        details: {
+          tags: liveNode.tags ?? {},
+        },
+      });
 
-    if (mode === "dry-run") {
-      if (!isAedOnlyNode(node)) {
-        summary.skippedDeleteNotAedOnly++;
-        issues.push({
-          type: "skipped_delete_not_aed_only",
-          severity: "warning",
-          message: `Skipped delete of node ${node.id} (${ref}): node has non-AED tags.`,
-          registerRef: ref,
-          osmNodeId: node.id,
-          details: {
-            tags: node.tags ?? {},
-          },
-        });
-        console.warn(
-          `Skipping delete of node ${node.id} (${ref}): node has non-AED tags.`,
-        );
-        continue;
-      }
+      log.warn(
+        node,
+        `Skipping delete of node ${node.id}: node has non-AED tags.`,
+      );
+      continue;
+    }
 
-      deletionCandidateNode = createPlannedNode(node);
-    } else {
-      const liveNode = await osmClient.getNodeFeature(node.id);
-      if (!isAedOnlyNode(liveNode)) {
-        summary.skippedDeleteNotAedOnly++;
-        issues.push({
-          type: "skipped_delete_not_aed_only",
-          severity: "warning",
-          message: `Skipped delete of node ${node.id} (${ref}): node has non-AED tags.`,
-          registerRef: ref,
-          osmNodeId: node.id,
-          details: {
-            tags: liveNode.tags ?? {},
-          },
-        });
-        console.warn(
-          `Skipping delete of node ${node.id} (${ref}): node has non-AED tags.`,
-        );
-        continue;
-      }
-
-      deletionCandidateNode = {
+    changePlan.delete.push({
+      registerId: ref,
+      node: {
         id: liveNode.id,
         lat: liveNode.lat,
         lon: liveNode.lon,
         version: liveNode.version,
         tags: { ...(liveNode.tags ?? {}) },
-      };
-    }
-
-    changePlan.delete.push({
-      registerId: ref,
-      node: deletionCandidateNode,
+      },
     });
     deletedNodeIds.add(node.id);
 
-    console.log(
-      `${mode === "dry-run" ? "[dry] Would delete" : "Planned delete"} node ${node.id} (${ref})`,
-    );
+    log.debug(`Planned delete node ${node.id} (${ref})`);
 
     summary.deleted++;
   }

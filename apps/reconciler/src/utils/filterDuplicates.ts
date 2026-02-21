@@ -1,4 +1,5 @@
 import type { OverpassNode } from "@repo/overpass-sdk";
+import { logger } from "./logger.ts";
 
 export interface DuplicateRefGroup {
   ref: string;
@@ -11,6 +12,8 @@ export interface DuplicateFilterResult {
   duplicates: DuplicateRefGroup[];
 }
 
+const log = logger.child({ util: "filterDuplicates" });
+
 // Accept managed AED nodes and split them into unique refs and duplicate ref groups.
 export const filterDuplicates = (
   managedAedNodes: OverpassNode[],
@@ -20,7 +23,8 @@ export const filterDuplicates = (
   for (const node of managedAedNodes) {
     const ref = node.tags?.["ref:hjertestarterregister"]?.trim();
     if (!ref) {
-      console.warn(
+      log.warn(
+        node,
         `Node ${node.id} does not have ref:hjertestarterregister tag`,
       );
       continue;
@@ -53,7 +57,7 @@ export const filterDuplicates = (
   }
 
   if (duplicates.length > 0) {
-    console.error(
+    log.error(
       `Found duplicate ref:hjertestarterregister values: ${duplicates.map((duplicate) => duplicate.ref).join(", ")}`,
     );
   }
