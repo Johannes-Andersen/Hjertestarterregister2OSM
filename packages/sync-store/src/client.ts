@@ -120,13 +120,6 @@ export class SyncStoreClient {
       });
   }
 
-  async deleteRun(runId: string): Promise<void> {
-    await this.sql`
-      DELETE FROM sync_runs
-      WHERE id = ${runId}
-    `;
-  }
-
   async addRunIssue(input: {
     runId: string;
     issue: NewSyncIssue;
@@ -232,28 +225,6 @@ export class SyncStoreClient {
       ORDER BY started_at DESC
       LIMIT ${normalizedLimit}
     `;
-  }
-
-  async listRunningRuns(): Promise<Pick<SyncRunRecord, "id" | "startedAt">[]> {
-    return this.sql<Pick<SyncRunRecord, "id" | "startedAt">[]>`
-      SELECT
-        id,
-        started_at as "startedAt"
-      FROM sync_runs
-      WHERE status = 'running'
-      ORDER BY started_at ASC
-    `;
-  }
-
-  async deleteRunsCompletedBefore(cutoffDate: Date): Promise<number> {
-    const deletedRows = await this.sql<{ id: string }[]>`
-      DELETE
-      FROM sync_runs
-      WHERE finished_at < ${cutoffDate}
-      RETURNING id
-    `;
-
-    return deletedRows.length;
   }
 
   async listIssueTypeCounts(

@@ -72,7 +72,7 @@ Notes:
 
 ## Database Setup
 
-Create the sync tables:
+Create the sync tables, indexes, and `pg_cron` cleanup jobs:
 
 ```bash
 psql "$DATABASE_URL" -f packages/sync-store/schema.sql
@@ -82,6 +82,12 @@ This creates:
 
 - `sync_runs`
 - `sync_run_issues`
+- `pg_cron` jobs:
+  - `sync-mark-stuck-runs` (`*/10 * * * *`)
+  - `sync-prune-old-runs` (`15 3 * * *`)
+
+> [!NOTE]
+> `pg_cron` must be enabled in your Postgres settings before applying `packages/sync-store/schema.sql`.
 
 ## Running the Reconciler
 
@@ -119,10 +125,11 @@ pnpm build       # Full build
 
 ## Reconciler Flow
 
-`apps/reconciler/src/index.ts` runs two jobs in sequence:
+`apps/reconciler/src/index.ts` runs one job:
 
-1. `databaseCleanup` (mark stale running jobs as failed + delete old completed runs)
-2. `reconciliation` (fetch, plan, safeguard, write previews, optionally upload)
+1. `reconciliation` (fetch, plan, safeguard, write previews, optionally upload)
+
+Run cleanup is handled by `pg_cron` directly in the database.
 
 The diagram and numbered steps below reflect the current implementation.
 
@@ -130,8 +137,7 @@ The diagram and numbered steps below reflect the current implementation.
 
 ```mermaid
 flowchart TD
-    Start([Start]) --> Cleanup["databaseCleanup job<br/>(cleanupStuckJobs + cleanupOldJobs)"]
-    Cleanup --> InitRun["Start sync run in DB<br/>(sync_runs)"]
+    Start([Start]) --> InitRun["Start sync run in DB<br/>(sync_runs)"]
     InitRun --> LoadReg["loadRegistryData<br/>(fetch assets, validate required fields,<br/>filter outside Norway, record issues)"]
     LoadReg --> LoadOSM["loadOverpassData<br/>(query nwr emergency=defibrillator,<br/>filter nodes only, record osm_not_a_node issues)"]
     LoadOSM --> HasOverpass{"Any OSM AED nodes?"}
@@ -162,7 +168,9 @@ flowchart TD
 
 ### Step-by-step
 
-1. **Database cleanup job** — Before reconciliation starts, stale running runs are marked failed (`cleanupStuckJobs`) and old completed runs are deleted (`cleanupOldJobs`) based on retention settings.
+1. **Scheduled DB cleanup (`pg_cron`)** — Outside the reconciler process, the database runs:
+   - `sync-mark-stuck-runs`: every 10 minutes, marks runs older than 3 hours in `running` state as `failed`.
+   - `sync-prune-old-runs`: daily at 03:15, deletes completed runs older than 30 days.
 
 2. **Start sync run** — A new run record is created in `sync_runs` with mode `dry-run` or `live`.
 

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { syncStore } from "./clients/syncStore.ts";
-import { databaseCleanup } from "./jobs/databaseCleanup.ts";
 import { reconciliation } from "./jobs/reconciliation.ts";
 import { logger } from "./utils/logger.ts";
 
@@ -9,8 +8,6 @@ const log = logger.child({ module: "index" });
 const runId = randomUUID();
 
 const main = async () => {
-  await databaseCleanup({ runId });
-
   await reconciliation({ runId });
 };
 

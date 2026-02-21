@@ -23,11 +23,6 @@ export const runtimeEnv = env;
 
 export const logLevel = env.LOG_LEVEL;
 
-export const databaseCleanupConfig = {
-  stuckJobTimeoutMs: 60 * 60 * 3 * 1000, // 3 hours
-  oldJobRetentionMs: 30 * 24 * 60 * 60 * 1000, // 30 days
-} as const;
-
 export const overpassConfig = {
   apiUrl: "https://overpass-api.de/api/interpreter",
   userAgent: `hjertestarterregister2osm/${version}`,

@@ -56,3 +56,48 @@ CREATE INDEX sync_run_issues_type_idx ON sync_run_issues (issue_type);
 
 -- Index for global issue listing (no run_id filter) ordered by created_at
 CREATE INDEX sync_run_issues_created_idx ON sync_run_issues (created_at DESC);
+
+-- Enable pg_cron-based cleanup jobs.
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Re-create jobs so this script can be re-run safely.
+DO $$
+DECLARE
+  existing_job RECORD;
+BEGIN
+  FOR existing_job IN
+    SELECT jobid
+    FROM cron.job
+    WHERE jobname IN ('sync-mark-stuck-runs', 'sync-prune-old-runs')
+  LOOP
+    PERFORM cron.unschedule(existing_job.jobid);
+  END LOOP;
+END
+$$;
+
+-- Mark runs stuck for more than 3 hours as failed.
+SELECT cron.schedule(
+  'sync-mark-stuck-runs',
+  '*/10 * * * *',
+  $sql$
+    UPDATE sync_runs
+    SET
+      status = 'failed',
+      finished_at = NOW(),
+      error_message = 'Job marked as failed by pg_cron due to timeout',
+      updated_at = NOW()
+    WHERE status = 'running'
+      AND started_at < NOW() - INTERVAL '3 hours';
+  $sql$
+);
+
+-- Delete completed runs older than 30 days (issues are removed by ON DELETE CASCADE).
+SELECT cron.schedule(
+  'sync-prune-old-runs',
+  '15 3 * * *',
+  $sql$
+    DELETE FROM sync_runs
+    WHERE finished_at IS NOT NULL
+      AND finished_at < NOW() - INTERVAL '30 days';
+  $sql$
+);
