@@ -16,6 +16,7 @@ if (!runId) {
 
 const syncStore = new SyncStoreClient({
   connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  maxConnections: 1,
   ssl: import.meta.env.DEV ? "require" : false,
 });
 
