@@ -202,7 +202,6 @@ flowchart TD
 9. **Merge or create missing registry AEDs** — `addNew` iterates registry AEDs not already managed:
    - If closest unmanaged node is within `unmanagedMergeDistanceMeters` (15 m), plan a merge (modify existing node with registry tags).
    - If that nearby unmanaged node is opted-out, merge is skipped with `osm_node_note_opt_out`.
-   - Otherwise, if any unmanaged node is within `nearbyAedDistanceMeters` (50 m), skip create and record `skipped_create_nearby`.
    - If no nearby unmanaged node is found, create a new AED node.
 
 10. **Aggregate metrics + deletion safeguard** — Change counts are aggregated across all tasks and written to `sync_runs`. Then a safety check aborts if `planned_deletes / total_osm_nodes > maxDeleteFraction` (default `0.5`).
@@ -215,12 +214,11 @@ flowchart TD
 
 ### Configurable Thresholds
 
-| Parameter                       | Default | Description                                                                   |
-| ------------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `changedLocationDistanceMeters` | 50 m    | Managed node is moved only if registry location differs by more than this     |
-| `unmanagedMergeDistanceMeters`  | 15 m    | Max distance to merge an unmanaged OSM node with a registry AED               |
-| `nearbyAedDistanceMeters`       | 50 m    | Skip creating a new node if an unmanaged OSM AED node is within this distance |
-| `maxDeleteFraction`             | 0.5     | Abort run if planned deletions exceed this fraction of total OSM AED nodes    |
+| Parameter                       | Default | Description                                                                |
+| ------------------------------- | ------- | -------------------------------------------------------------------------- |
+| `changedLocationDistanceMeters` | 50 m    | Managed node is moved only if registry location differs by more than this  |
+| `unmanagedMergeDistanceMeters`  | 15 m    | Max distance to merge an unmanaged OSM node with a registry AED            |
+| `maxDeleteFraction`             | 0.5     | Abort run if planned deletions exceed this fraction of total OSM AED nodes |
 
 See [apps/reconciler/src/config.ts](apps/reconciler/src/config.ts) for all configuration.
 
@@ -233,7 +231,6 @@ See [apps/reconciler/src/config.ts](apps/reconciler/src/config.ts) for all confi
 | `osm_not_a_node`                         | error    | OSM element with AED details is not a node and is therefore excluded from automation     |
 | `osm_node_note_opt_out`                  | warning  | Node has a `note` or `fixme` tag and is excluded from extraction/update/merge automation |
 | `managed_node_location_within_tolerance` | warning  | Managed node location differs from registry but is within the move tolerance             |
-| `skipped_create_nearby`                  | warning  | New node creation skipped because a nearby unmanaged AED node already exists             |
 | `skipped_delete_not_aed_only`            | warning  | Node deletion skipped because it has primary-feature tags (amenity, shop, etc.)          |
 
 ## Useful Links

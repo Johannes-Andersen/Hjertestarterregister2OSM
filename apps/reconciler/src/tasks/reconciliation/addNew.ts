@@ -156,41 +156,6 @@ export const addNew = async ({
       continue;
     }
 
-    // Check if an unmanaged node is nearby but too far to merge — skip creation
-    const nearbySkip = findClosestUnmanagedNode({
-      lat: registerAed.SITE_LATITUDE,
-      lon: registerAed.SITE_LONGITUDE,
-      overpassElements,
-      maxDistanceMeters: reconcilerConfig.nearbyAedDistanceMeters,
-    });
-
-    if (nearbySkip) {
-      log.warn(
-        {
-          registerAed,
-          nearbyNode: nearbySkip,
-          distanceMeters: nearbySkip.distanceMeters.toFixed(1),
-        },
-        "Skipping create: nearby unmanaged AED node found",
-      );
-
-      syncStore.addRunIssue({
-        runId,
-        issue: {
-          type: "skipped_create_nearby",
-          severity: "warning",
-          message: `Skipped create for register AED ${registerAed.ASSET_GUID}: nearby unmanaged node ${nearbySkip.node.id} at ${nearbySkip.distanceMeters.toFixed(1)}m.`,
-          registerRef: registerAed.ASSET_GUID,
-          osmNodeId: nearbySkip.node.id,
-          details: {
-            distanceMeters: Number(nearbySkip.distanceMeters.toFixed(2)),
-          },
-        },
-      });
-
-      continue;
-    }
-
     // No nearby unmanaged nodes — create a new AED node
     const mappedTags = mapRegisterAedToOsmTags(registerAed);
 

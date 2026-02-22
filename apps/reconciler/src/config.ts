@@ -33,14 +33,14 @@ export const overpassConfig = {
 
 export const changesetConfig = {
   userAgent: `hjertestarterregister2osm/${version}`,
-  commentSubject: "AED locations",
+  commentSubject: "defibrillators - Norwegian import",
   commonTags: {
     created_by: `hjertestarterregister2osm v${version}`,
     source: "Hjertestarterregisteret",
     "source:url": "https://hjertestarterregister.113.no",
     "source:date": new Date().toISOString(),
     "import:page":
-      "https://wiki.openstreetmap.org/w/index.php?title=Import/Catalogue/AED_import_for_Norway",
+      "https://wiki.openstreetmap.org/wiki/Import/Catalogue/AED_import_for_Norway",
     bot: "yes",
   },
 } as const;
@@ -49,7 +49,6 @@ export const reconcilerConfig = {
   mode: env.DRY === "false" ? "live" : "dry-run",
   changedLocationDistanceMeters: 50,
   unmanagedMergeDistanceMeters: 15,
-  nearbyAedDistanceMeters: 50,
   maxDeleteFraction: 0.5,
   previewOscOutputPath: `${import.meta.dirname}/../out/dry-run-changes.osc`,
   previewGeojsonOutputPath: `${import.meta.dirname}/../out/dry-run-changes.geojson`,

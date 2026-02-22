@@ -10,7 +10,6 @@ export type SyncIssueType =
   | "osm_not_a_node"
   | "osm_node_note_opt_out"
   | "managed_node_location_within_tolerance"
-  | "skipped_create_nearby"
   | "skipped_delete_not_aed_only";
 
 export type SyncOsmElementType = "node" | "way" | "relation";
