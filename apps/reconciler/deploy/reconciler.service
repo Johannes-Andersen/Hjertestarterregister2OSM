@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/hjertestarterregister2osm
-ExecStart=/usr/bin/env bash -lc './apps/reconciler/deploy/run-reconciler.sh'
+ExecStart=/opt/hjertestarterregister2osm/apps/reconciler/deploy/run-reconciler.sh
 User=hjertestarterregister2osm
 Group=hjertestarterregister2osm
 Nice=10
