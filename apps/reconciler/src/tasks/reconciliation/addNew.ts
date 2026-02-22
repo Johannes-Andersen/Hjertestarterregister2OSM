@@ -7,6 +7,7 @@ import { syncStore } from "../../clients/syncStore.ts";
 import { reconcilerConfig } from "../../config.ts";
 import { toRegisterAed } from "../../types/registerAed.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
+import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
 import { isManagedAed } from "../../utils/isManagedAed.ts";
 import { isNodeOptedOut } from "../../utils/isNodeOptedOut.ts";
 import { mapRegisterAedToOsmTags } from "../../utils/mapRegisterAedToOsmTags.ts";
@@ -24,24 +25,22 @@ interface NearbyUnmanagedNode {
 }
 
 /**
- * Find the closest unmanaged AED node within the given distance.
+ * Find the closest candidate node within the given distance.
  */
-const findClosestUnmanagedNode = ({
+const findClosestNode = ({
   lat,
   lon,
-  overpassElements,
+  candidates,
   maxDistanceMeters,
 }: {
   lat: number;
   lon: number;
-  overpassElements: OverpassNode[];
+  candidates: OverpassNode[];
   maxDistanceMeters: number;
 }): NearbyUnmanagedNode | null => {
   let closest: NearbyUnmanagedNode | null = null;
 
-  for (const node of overpassElements) {
-    if (isManagedAed(node)) continue;
-
+  for (const node of candidates) {
     const distance = coordinateDistance(
       { lat, lon },
       { lat: node.lat, lon: node.lon },
@@ -79,6 +78,11 @@ export const addNew = async ({
       .map((node) => node.tags?.["ref:hjertestarterregister"]?.trim())
       .filter((ref): ref is string => !!ref),
   );
+  const unmanagedNodes = overpassElements.filter((node) => !isManagedAed(node));
+  const unmanagedStandaloneNodes = unmanagedNodes.filter(isAedOnlyNode);
+  const unmanagedNonStandaloneNodes = unmanagedNodes.filter(
+    (node) => !isAedOnlyNode(node),
+  );
 
   for (const asset of registryAssets) {
     const registerAed = toRegisterAed(asset);
@@ -87,19 +91,21 @@ export const addNew = async ({
     // Already managed in OSM — handled by updateExisting
     if (managedRefs.has(registerAed.ASSET_GUID)) continue;
 
-    // Check for a close unmanaged node that we can merge with
-    const nearbyMerge = findClosestUnmanagedNode({
+    // Check for a close standalone unmanaged node that we can merge with.
+    // Mixed POI+AED nodes should first be split by aedExtraction and then
+    // matched on a later run.
+    const nearbyStandaloneMerge = findClosestNode({
       lat: registerAed.SITE_LATITUDE,
       lon: registerAed.SITE_LONGITUDE,
-      overpassElements,
+      candidates: unmanagedStandaloneNodes,
       maxDistanceMeters: reconcilerConfig.unmanagedMergeDistanceMeters,
     });
 
-    if (nearbyMerge) {
+    if (nearbyStandaloneMerge) {
       // Skip merge if the node is opted out
-      if (isNodeOptedOut(nearbyMerge.node)) {
-        log.warn(
-          { nearbyNode: nearbyMerge, registerAed },
+      if (isNodeOptedOut(nearbyStandaloneMerge.node)) {
+        log.info(
+          { nearbyNode: nearbyStandaloneMerge, registerAed },
           "Skipping merge: nearby unmanaged node is opted out",
         );
 
@@ -108,9 +114,9 @@ export const addNew = async ({
           issue: {
             type: "osm_node_note_opt_out",
             severity: "warning",
-            message: `Skipped merge of register AED ${registerAed.ASSET_GUID} with node ${nearbyMerge.node.id} (${nearbyMerge.distanceMeters.toFixed(1)}m): node is opted out.`,
+            message: `Skipped merge of register AED ${registerAed.ASSET_GUID} with node ${nearbyStandaloneMerge.node.id} (${nearbyStandaloneMerge.distanceMeters.toFixed(1)}m): node is opted out.`,
             registerRef: registerAed.ASSET_GUID,
-            osmNodeId: nearbyMerge.node.id,
+            osmNodeId: nearbyStandaloneMerge.node.id,
           },
         });
 
@@ -119,7 +125,18 @@ export const addNew = async ({
 
       // Merge: update the unmanaged node with registry info
       const mappedTags = mapRegisterAedToOsmTags(registerAed);
-      const liveNode = await osmClient.getNodeFeature(nearbyMerge.node.id);
+      const liveNode = await osmClient.getNodeFeature(
+        nearbyStandaloneMerge.node.id,
+      );
+
+      // Guard against stale Overpass data: do not merge into mixed nodes.
+      if (!isAedOnlyNode(liveNode)) {
+        log.warn(
+          { nearbyNode: nearbyStandaloneMerge, registerAed },
+          "Skipping merge: live node is no longer standalone AED",
+        );
+        continue;
+      }
 
       const nextNodeTags = {
         ...(liveNode.tags ?? {}),
@@ -146,13 +163,29 @@ export const addNew = async ({
 
       log.debug(
         {
-          nearbyNode: nearbyMerge,
+          nearbyNode: nearbyStandaloneMerge,
           registerAed,
-          distanceMeters: nearbyMerge.distanceMeters.toFixed(1),
+          distanceMeters: nearbyStandaloneMerge.distanceMeters.toFixed(1),
         },
         "Planned merge with nearby unmanaged AED node",
       );
 
+      continue;
+    }
+
+    // If there is a nearby mixed node, wait for extraction to create a
+    // standalone AED node, then link it on the next run.
+    const nearbyNonStandaloneNode = findClosestNode({
+      lat: registerAed.SITE_LATITUDE,
+      lon: registerAed.SITE_LONGITUDE,
+      candidates: unmanagedNonStandaloneNodes,
+      maxDistanceMeters: reconcilerConfig.unmanagedMergeDistanceMeters,
+    });
+    if (nearbyNonStandaloneNode) {
+      log.warn(
+        { nearbyNode: nearbyNonStandaloneNode, registerAed },
+        "Skipping add: nearby unmanaged node is non-standalone and should be extracted first",
+      );
       continue;
     }
 

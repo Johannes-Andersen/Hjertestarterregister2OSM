@@ -8,20 +8,44 @@ const log = logger.child({ util: "mapRegisterAedToOsmTags" });
 const OSM_MAX_TAG_VALUE_LENGTH = 255;
 
 /**
- * Check if a tag value exceeds OSM's limit and return null if so.
- * Logs a warning when skipping oversized values.
+ * Performs validation and normalization on a potential tag value from the register.
+ * - Trims whitespace and collapses multiple spaces into one
+ * - Ensures the value is a string and not empty after trimming
+ * - Checks that the length does not exceed OSM limits
+ * - Logs a warning and returns null if the value is invalid
  */
-const validateTagValue = (
-  value: string,
-  tagName: string,
-  aedGuid: string,
-): string | null => {
-  if (value.length <= OSM_MAX_TAG_VALUE_LENGTH) return value;
+const validateTagValue = ({
+  value,
+  tagName,
+  aedGuid,
+}: {
+  value?: string | number;
+  tagName: string;
+  aedGuid: string;
+}): string | null => {
+  if (value === undefined || value === null) return null;
 
-  log.warn(
-    `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${value.length} chars)`,
-  );
-  return null;
+  const normalizedValue =
+    typeof value === "number"
+      ? String(value)
+      : typeof value === "string"
+        ? value
+        : null;
+
+  if (!normalizedValue) return null;
+
+  const cleanedValue = normalizedValue.trim().replace(/\s+/g, " "); // collapse multiple whitespace
+
+  if (cleanedValue.length === 0) return null;
+
+  if (cleanedValue.length >= OSM_MAX_TAG_VALUE_LENGTH) {
+    log.warn(
+      `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${cleanedValue.length} chars)`,
+    );
+    return null;
+  }
+
+  return cleanedValue;
 };
 
 type DayRange = { day: string; from?: number; to?: number };
@@ -142,11 +166,12 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
     "ref:hjertestarterregister": aed.ASSET_GUID,
   };
 
-  const name = typeof aed.SITE_NAME === "string" ? aed.SITE_NAME.trim() : "";
-  if (name) {
-    const validName = validateTagValue(name, "name", aed.ASSET_GUID);
-    if (validName) tags.name = validName;
-  }
+  const name = validateTagValue({
+    value: aed.SITE_NAME,
+    tagName: "name",
+    aedGuid: aed.ASSET_GUID,
+  });
+  if (name) tags.name = name;
 
   if (
     typeof aed.SITE_FLOOR_NUMBER === "number" &&
@@ -155,25 +180,25 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
     tags.level = String(aed.SITE_FLOOR_NUMBER);
   }
 
-  const location =
-    typeof aed.SITE_DESCRIPTION === "string" ? aed.SITE_DESCRIPTION.trim() : "";
-  if (location) {
-    const validLocation = validateTagValue(
-      location,
-      "defibrillator:location",
-      aed.ASSET_GUID,
-    );
-    if (validLocation) tags["defibrillator:location"] = validLocation;
-  }
+  const location = validateTagValue({
+    value: aed.SITE_DESCRIPTION,
+    tagName: "defibrillator:location",
+    aedGuid: aed.ASSET_GUID,
+  });
+  if (location) tags["defibrillator:location"] = location;
 
-  const model =
-    typeof aed.ASSET_TYPE_NAME === "string" ? aed.ASSET_TYPE_NAME.trim() : "";
+  const model = validateTagValue({
+    value: aed.ASSET_TYPE_NAME,
+    tagName: "model",
+    aedGuid: aed.ASSET_GUID,
+  });
   if (model) tags.model = model;
 
-  const manufacturer =
-    typeof aed.MANUFACTURER_NAME === "string"
-      ? aed.MANUFACTURER_NAME.trim()
-      : "";
+  const manufacturer = validateTagValue({
+    value: aed.MANUFACTURER_NAME,
+    tagName: "manufacturer",
+    aedGuid: aed.ASSET_GUID,
+  });
   if (manufacturer) tags.manufacturer = manufacturer;
 
   const openingHours = buildOpeningHours(aed);
