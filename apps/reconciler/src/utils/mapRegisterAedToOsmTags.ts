@@ -34,7 +34,13 @@ const validateTagValue = ({
 
   if (!normalizedValue) return null;
 
-  const cleanedValue = normalizedValue.trim().replace(/\s+/g, " "); // collapse multiple whitespace
+  const cleanedValue = normalizedValue
+    // Replace newlines with ". " to ensure separate sentences don't merge
+    .replace(/[\r\n]+/g, ". ")
+    .replace(/\s+/g, " ") // Collapse multiple whitespace
+    .replace(/\s\./g, ".") // Remove space before period (e.g. " . " -> ". ")
+    .replace(/\.+/g, ".") // Deduplicate periods (e.g. ".." -> ".")
+    .trim();
 
   if (cleanedValue.length === 0) return null;
 
