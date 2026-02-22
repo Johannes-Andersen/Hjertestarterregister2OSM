@@ -43,7 +43,7 @@ export const aedExtraction = async ({
         issue: {
           type: "osm_node_note_opt_out",
           severity: "warning",
-          message: `Node ${node.id} has a note tag and is excluded from AED extraction.`,
+          message: `Node ${node.id} has a note/fixme tag and is excluded from AED extraction.`,
           osmNodeId: node.id,
         },
       });

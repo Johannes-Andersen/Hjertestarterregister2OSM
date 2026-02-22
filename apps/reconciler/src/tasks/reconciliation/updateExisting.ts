@@ -100,7 +100,7 @@ export const updateExisting = async ({
         issue: {
           type: "osm_node_note_opt_out",
           severity: "warning",
-          message: `Node ${node.id} (${ref}) has a note tag and is excluded from updates.`,
+          message: `Node ${node.id} (${ref}) has a note/fixme tag and is excluded from updates.`,
           registerRef: ref,
           osmNodeId: node.id,
         },

@@ -179,7 +179,7 @@ flowchart TD
 4. **Load Overpass AED elements** — `loadOverpassData` queries Overpass for `nwr["emergency"="defibrillator"]` inside the Norway polygon. Non-node elements are dropped and recorded as `osm_not_a_node` issues. If zero OSM AED nodes remain, the run aborts immediately for safety.
 
 5. **Extract standalone AEDs from mixed nodes** — `aedExtraction` scans all OSM nodes and identifies non-AED-only nodes (for example, POIs carrying both AED and primary-feature tags like `amenity` or `shop`).
-   - Nodes with a `note` tag are skipped and logged as `osm_node_note_opt_out`.
+   - Nodes with a `note` or `fixme` tag are skipped and logged as `osm_node_note_opt_out`.
    - For other mixed nodes, the live node is fetched from OSM, AED tags are stripped from the source node, and a new standalone AED node is planned at the same coordinates.
 
 6. **Delete removed managed nodes** — `deleteRemoved` handles managed nodes (`ref:hjertestarterregister`) whose ref is no longer present in the registry:
@@ -193,7 +193,7 @@ flowchart TD
 
 8. **Update existing managed nodes** — `updateExisting` processes managed nodes that still exist in the registry:
    - Duplicate refs are skipped (handled by step 7).
-   - Opted-out nodes (`note`) are skipped with `osm_node_note_opt_out`.
+   - Opted-out nodes (`note` or `fixme`) are skipped with `osm_node_note_opt_out`.
    - Tag diffs are computed from `mapRegisterAedToOsmTags`.
    - Location is moved only when distance exceeds `changedLocationDistanceMeters` (50 m).
    - Distances between 2 m and 50 m create `managed_node_location_within_tolerance`.
@@ -226,15 +226,15 @@ See [apps/reconciler/src/config.ts](apps/reconciler/src/config.ts) for all confi
 
 ## Issue Types
 
-| Issue Type                               | Severity | Description                                                                          |
-| ---------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
-| `register_aed_outside_norway`            | warning  | Registry AED has coordinates outside the Norway polygon                              |
-| `register_missing_required_data`         | warning  | Registry asset is missing required fields (`ASSET_GUID`, location, or `SITE_NAME`)   |
-| `osm_not_a_node`                         | error    | OSM element with AED details is not a node and is therefore excluded from automation |
-| `osm_node_note_opt_out`                  | warning  | Node has a `note` tag and is excluded from extraction/update/merge automation        |
-| `managed_node_location_within_tolerance` | warning  | Managed node location differs from registry but is within the move tolerance         |
-| `skipped_create_nearby`                  | warning  | New node creation skipped because a nearby unmanaged AED node already exists         |
-| `skipped_delete_not_aed_only`            | warning  | Node deletion skipped because it has primary-feature tags (amenity, shop, etc.)      |
+| Issue Type                               | Severity | Description                                                                              |
+| ---------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `register_aed_outside_norway`            | warning  | Registry AED has coordinates outside the Norway polygon                                  |
+| `register_missing_required_data`         | warning  | Registry asset is missing required fields (`ASSET_GUID`, location, or `SITE_NAME`)       |
+| `osm_not_a_node`                         | error    | OSM element with AED details is not a node and is therefore excluded from automation     |
+| `osm_node_note_opt_out`                  | warning  | Node has a `note` or `fixme` tag and is excluded from extraction/update/merge automation |
+| `managed_node_location_within_tolerance` | warning  | Managed node location differs from registry but is within the move tolerance             |
+| `skipped_create_nearby`                  | warning  | New node creation skipped because a nearby unmanaged AED node already exists             |
+| `skipped_delete_not_aed_only`            | warning  | Node deletion skipped because it has primary-feature tags (amenity, shop, etc.)          |
 
 ## Useful Links
 
