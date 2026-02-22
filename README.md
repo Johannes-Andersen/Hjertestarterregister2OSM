@@ -138,6 +138,60 @@ This creates:
 node --env-file=./apps/reconciler/.env apps/reconciler/src/index.ts
 ```
 
+## Ubuntu Deployment (Hourly)
+
+Templates for a one-shot systemd service and hourly timer are included:
+
+- `apps/reconciler/deploy/run-reconciler.sh`
+- `apps/reconciler/deploy/reconciler.service`
+- `apps/reconciler/deploy/reconciler.timer`
+
+Quick setup on the server:
+
+1. Clone repo to `/opt/hjertestarterregister2osm`.
+2. Install dependencies:
+
+```bash
+cd /opt/hjertestarterregister2osm
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+3. Create env file:
+
+```bash
+cp /opt/hjertestarterregister2osm/apps/reconciler/.env.example /opt/hjertestarterregister2osm/apps/reconciler/.env
+```
+
+4. Fill in secrets in `/opt/hjertestarterregister2osm/apps/reconciler/.env`.
+5. Ensure the run script is executable:
+
+```bash
+chmod +x /opt/hjertestarterregister2osm/apps/reconciler/deploy/run-reconciler.sh
+```
+
+6. Copy systemd templates and adjust `User`, `Group`, and `WorkingDirectory` if needed:
+
+```bash
+sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.service /etc/systemd/system/reconciler.service
+sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.timer /etc/systemd/system/reconciler.timer
+```
+
+7. Enable hourly runs:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now reconciler.timer
+```
+
+8. Verify:
+
+```bash
+systemctl status reconciler.timer
+systemctl list-timers | grep reconciler
+journalctl -u reconciler.service -n 200 --no-pager
+```
+
 ## Running the Website
 
 For local UI development:

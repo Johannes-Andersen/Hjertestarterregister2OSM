@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Hjertestarterregister Reconciler hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+Unit=reconciler.service
+
+[Install]
+WantedBy=timers.target

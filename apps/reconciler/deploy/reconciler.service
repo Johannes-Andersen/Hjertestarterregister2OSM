@@ -1,0 +1,17 @@
+[Unit]
+Description=Hjertestarterregister Reconciler (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/hjertestarterregister2osm
+ExecStart=/usr/bin/env bash -lc './apps/reconciler/deploy/run-reconciler.sh'
+User=hjertestarterregister2osm
+Group=hjertestarterregister2osm
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target
