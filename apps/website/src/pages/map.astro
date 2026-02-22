@@ -1,0 +1,496 @@
+---
+import Panel from "../components/ui/Panel.astro";
+import Layout from "../layouts/Layout.astro";
+
+export const prerender = false;
+---
+
+<Layout
+  title="AED Map Debug View | Hjertestarterregister2OSM"
+  description="Map-based debug view of AEDs synced into OpenStreetMap from Hjertestarterregister."
+>
+  <Panel>
+    <Fragment slot="header">
+      <div>
+        <p class="eyebrow">OSM Debug Tool</p>
+        <h2>AEDs visible in OpenStreetMap</h2>
+      </div>
+    </Fragment>
+
+    <p class="disclaimer is-critical">
+      <strong>Do not use this map in emergencies.</strong>
+      Always call the local emergency number and follow official emergency
+      guidance.
+    </p>
+    <p class="disclaimer">
+      This page is only for debugging sync behavior. Data is pulled from
+      OpenStreetMap through Overpass and may be delayed compared to real-time
+      OSM edits.
+    </p>
+  </Panel>
+
+  <Panel class="map-panel">
+    <Fragment slot="header">
+      <h3>Managed AED map layer</h3>
+      <span id="map-status">Loading map data...</span>
+    </Fragment>
+
+    <div id="aed-map" aria-label="Map of synced AEDs in OSM"></div>
+
+    <p id="map-meta" class="map-meta">
+      This layer displays objects tagged with
+      <code>ref:hjertestarterregister</code>.
+    </p>
+
+    <noscript>
+      <p class="map-error">JavaScript is required to render this map.</p>
+    </noscript>
+  </Panel>
+</Layout>
+
+<script>
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import opening_hours from "opening_hours";
+
+type OpeningState = "open" | "closed" | "unknown" | "invalid" | "unspecified";
+
+interface AedProperties {
+  id: string;
+  ref: string | null;
+  name: string | null;
+  level: string | null;
+  location: string | null;
+  openingHours: string | null;
+  elementType: string;
+  osmUrl: string;
+  openingState?: OpeningState;
+  isClosedNow?: boolean;
+}
+
+interface AedFeature {
+  type: "Feature";
+  geometry: { type: "Point"; coordinates: [number, number] };
+  properties: AedProperties;
+}
+
+interface AedCollection {
+  type: "FeatureCollection";
+  features: AedFeature[];
+}
+
+interface ApiResponse {
+  generatedAt: string;
+  osmBaseTimestamp: string | null;
+  totalElements: number;
+  displayedElements: number;
+  featureCollection: AedCollection;
+}
+
+const COLOR = {
+  open: "#2563eb",
+  closed: "#ea580c",
+  mixed: "#7c3aed",
+  stroke: "#fff",
+} as const;
+
+const SRC = "aed-source";
+const LAYERS = {
+  clusterOpen: "clusters-open",
+  clusterClosed: "clusters-closed",
+  clusterMixed: "clusters-mixed",
+  clusterCount: "cluster-count",
+  points: "points",
+} as const;
+
+const CLUSTER_IDS = [
+  LAYERS.clusterOpen,
+  LAYERS.clusterClosed,
+  LAYERS.clusterMixed,
+] as const;
+const REFRESH_MS = 60_000;
+
+const OPENING_LABELS: Record<OpeningState, string> = {
+  open: "Open now (Norway time)",
+  closed: "Closed now (Norway time)",
+  unknown: "Unknown now (conditional rule)",
+  invalid: "opening_hours could not be parsed",
+  unspecified: "No opening_hours tag",
+};
+
+const mapEl = document.getElementById("aed-map");
+if (!mapEl) throw new Error("#aed-map not found");
+const statusEl = document.getElementById("map-status");
+const metaEl = document.getElementById("map-meta");
+
+const setStatus = (t: string) => {
+  if (statusEl) statusEl.textContent = t;
+};
+const setMeta = (t: string) => {
+  if (metaEl) metaEl.textContent = t;
+};
+
+const osloFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Oslo",
+  hour12: false,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+const getNorwayWallClock = (instant: Date): Date => {
+  const p = Object.fromEntries(
+    osloFmt.formatToParts(instant).map(({ type, value }) => [type, +value]),
+  ) as Record<Intl.DateTimeFormatPartTypes, number>;
+  return new Date(
+    p.year,
+    p.month - 1,
+    p.day,
+    p.hour,
+    p.minute,
+    p.second,
+    instant.getMilliseconds(),
+  );
+};
+
+const evaluateOpening = (
+  raw: string | null | undefined,
+  coords: [number, number],
+  now: Date,
+): { openingState: OpeningState; isClosedNow: boolean } => {
+  const value = raw?.trim();
+  if (!value) return { openingState: "unspecified", isClosedNow: false };
+
+  try {
+    const oh = new opening_hours(
+      value,
+      {
+        lat: coords[1],
+        lon: coords[0],
+        address: { country_code: "no", state: "Norge" },
+      },
+      0,
+    );
+
+    if (oh.getUnknown(now))
+      return { openingState: "unknown", isClosedNow: false };
+    const isOpen = oh.getState(now);
+    return { openingState: isOpen ? "open" : "closed", isClosedNow: !isOpen };
+  } catch {
+    return { openingState: "invalid", isClosedNow: false };
+  }
+};
+
+const decorateOpeningStates = (fc: AedCollection): AedCollection => {
+  const now = getNorwayWallClock(new Date());
+  return {
+    type: "FeatureCollection",
+    features: fc.features.map((f) => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        ...evaluateOpening(
+          f.properties.openingHours,
+          f.geometry.coordinates,
+          now,
+        ),
+      },
+    })),
+  };
+};
+
+const ESC_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ESC_MAP[c] ?? c);
+
+const renderPopup = ({ properties: p }: AedFeature) => {
+  const row = (label: string, val: string | null | undefined) =>
+    val ? `<div><strong>${label}:</strong> ${esc(val)}</div>` : "";
+
+  return [
+    `<h4>${esc(p.id)}</h4>`,
+    row("Registry ref", p.ref),
+    row("Name", p.name),
+    row("Level", p.level),
+    row("Location", p.location),
+    row("opening_hours", p.openingHours),
+    `<div><strong>Status now:</strong> ${esc(OPENING_LABELS[p.openingState ?? "unspecified"])}</div>`,
+    `<p><a href="${p.osmUrl}" target="_blank" rel="noreferrer">Open in OSM</a></p>`,
+  ].join("");
+};
+
+const fmtDate = (v: string | null) => {
+  if (!v) return "unknown";
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? "unknown" : d.toLocaleString();
+};
+
+type GeoJSONSource = maplibregl.GeoJSONSource & {
+  getClusterExpansionZoom: (id: number) => Promise<number>;
+};
+
+const map = new maplibregl.Map({
+  container: mapEl,
+  style: "https://tiles.openfreemap.org/styles/liberty",
+  center: [10.75, 63.5],
+  zoom: 4.2,
+  minZoom: 3,
+  maxZoom: 18,
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+
+let refreshTimer = 0;
+addEventListener("beforeunload", () => clearInterval(refreshTimer));
+
+const applyMapData = (payload: ApiResponse) => {
+  const decorated = decorateOpeningStates(payload.featureCollection);
+
+  map.addSource(SRC, {
+    type: "geojson",
+    data: decorated,
+    cluster: true,
+    clusterMaxZoom: 12,
+    clusterRadius: 40,
+    clusterProperties: {
+      closedCount: [
+        "+",
+        ["case", ["boolean", ["get", "isClosedNow"], false], 1, 0],
+      ],
+      openCount: [
+        "+",
+        ["case", ["boolean", ["get", "isClosedNow"], false], 0, 1],
+      ],
+    },
+  });
+
+  const clusterDefs = [
+    {
+      id: LAYERS.clusterOpen,
+      color: COLOR.open,
+      filter: [
+        "all",
+        ["has", "point_count"],
+        ["==", ["get", "closedCount"], 0],
+      ],
+    },
+    {
+      id: LAYERS.clusterClosed,
+      color: COLOR.closed,
+      filter: ["all", ["has", "point_count"], ["==", ["get", "openCount"], 0]],
+    },
+    {
+      id: LAYERS.clusterMixed,
+      color: COLOR.mixed,
+      filter: [
+        "all",
+        ["has", "point_count"],
+        [">", ["get", "closedCount"], 0],
+        [">", ["get", "openCount"], 0],
+      ],
+    },
+  ];
+
+  for (const { id, color, filter } of clusterDefs) {
+    map.addLayer({
+      id,
+      type: "circle",
+      source: SRC,
+      filter: filter as maplibregl.FilterSpecification,
+      paint: {
+        "circle-color": color,
+        "circle-opacity": 0.82,
+        "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 100, 28],
+        "circle-stroke-color": COLOR.stroke,
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  map.addLayer({
+    id: LAYERS.clusterCount,
+    type: "symbol",
+    source: SRC,
+    filter: ["has", "point_count"],
+    layout: {
+      "text-field": "{point_count_abbreviated}",
+      "text-size": 12,
+      "text-font": ["Noto Sans Bold"],
+    },
+    paint: { "text-color": COLOR.stroke },
+  });
+
+  map.addLayer({
+    id: LAYERS.points,
+    type: "circle",
+    source: SRC,
+    filter: ["!", ["has", "point_count"]],
+    paint: {
+      "circle-color": [
+        "case",
+        ["boolean", ["get", "isClosedNow"], false],
+        COLOR.closed,
+        COLOR.open,
+      ],
+      "circle-radius": 6,
+      "circle-stroke-width": 1.5,
+      "circle-stroke-color": COLOR.stroke,
+    },
+  });
+
+  const setCursor = (c: string) => {
+    map.getCanvas().style.cursor = c;
+  };
+
+  for (const layerId of CLUSTER_IDS) {
+    map.on("click", layerId, async (e) => {
+      const feat = e.features?.[0];
+      if (!feat || feat.geometry.type !== "Point") return;
+
+      const clusterId = feat.properties?.cluster_id as number | undefined;
+      const source = map.getSource(SRC) as GeoJSONSource | undefined;
+      if (clusterId == null || !source) return;
+
+      const [lng, lat] = (feat.geometry as GeoJSON.Point).coordinates as [
+        number,
+        number,
+      ];
+      try {
+        const zoom = await source.getClusterExpansionZoom(clusterId);
+        map.easeTo({ center: [lng, lat], zoom: zoom ?? 12, duration: 300 });
+      } catch {
+        /* cluster may have dissolved */
+      }
+    });
+
+    map.on("mouseenter", layerId, () => setCursor("pointer"));
+    map.on("mouseleave", layerId, () => setCursor(""));
+  }
+
+  map.on("click", LAYERS.points, (e) => {
+    const feat = e.features?.[0];
+    if (!feat || feat.geometry.type !== "Point") return;
+
+    const coords = (feat.geometry as GeoJSON.Point).coordinates as [
+      number,
+      number,
+    ];
+    new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+      .setLngLat(coords)
+      .setHTML(renderPopup(feat as unknown as AedFeature))
+      .addTo(map);
+  });
+  map.on("mouseenter", LAYERS.points, () => setCursor("pointer"));
+  map.on("mouseleave", LAYERS.points, () => setCursor(""));
+
+  if (decorated.features.length) {
+    const bounds = new maplibregl.LngLatBounds();
+    for (const f of decorated.features) bounds.extend(f.geometry.coordinates);
+    map.fitBounds(bounds, { padding: 56, maxZoom: 11, duration: 0 });
+  }
+
+  const countClosed = (fc: AedCollection) =>
+    fc.features.filter((f) => f.properties.isClosedNow).length;
+
+  const updateStatus = (closed: number) =>
+    setStatus(
+      `${payload.displayedElements.toLocaleString()} AEDs shown (${payload.totalElements.toLocaleString()} total, ${closed.toLocaleString()} closed now).`,
+    );
+
+  updateStatus(countClosed(decorated));
+  setMeta(
+    `OSM base: ${fmtDate(payload.osmBaseTimestamp)}. Refreshed: ${fmtDate(payload.generatedAt)}. opening_hours evaluated in Europe/Oslo.`,
+  );
+
+  clearInterval(refreshTimer);
+  refreshTimer = window.setInterval(() => {
+    const source = map.getSource(SRC) as GeoJSONSource | undefined;
+    if (!source) return;
+    const refreshed = decorateOpeningStates(payload.featureCollection);
+    source.setData(refreshed as unknown as GeoJSON.GeoJSON);
+    updateStatus(countClosed(refreshed));
+  }, REFRESH_MS);
+};
+
+const loadData = async () => {
+  setStatus("Loading OSM data...");
+  setMeta("Fetching latest Overpass snapshot...");
+
+  try {
+    const res = await fetch("/api/osm-aeds.json");
+    if (!res.ok)
+      throw new Error(
+        `API returned ${res.status}: ${(await res.text()).slice(0, 250)}`,
+      );
+
+    const payload: ApiResponse = await res.json();
+    if (map.loaded()) applyMapData(payload);
+    else map.once("load", () => applyMapData(payload));
+  } catch (err) {
+    setStatus("Failed to load map data.");
+    setMeta(
+      err instanceof Error ? err.message : "Unknown error loading map data.",
+    );
+  }
+};
+
+loadData();
+</script>
+
+<style>
+.disclaimer {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.disclaimer + .disclaimer {
+  margin-top: 0.6rem;
+}
+
+.disclaimer.is-critical {
+  padding: 0.65rem 0.8rem;
+  color: var(--error);
+  background: #fff1ef;
+  border: 1px solid #f8c9c2;
+  border-radius: 0.75rem;
+}
+
+.map-panel :global(.panel-body) {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0.8rem;
+}
+
+#aed-map {
+  width: 100%;
+  height: min(68vh, 700px);
+  min-height: 460px;
+}
+
+.map-meta {
+  padding: 0.8rem 1rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-subtle);
+}
+
+.map-error {
+  padding: 0 1rem 1rem;
+  margin: 0;
+  color: var(--error);
+}
+
+@media (max-width: 800px) {
+  #aed-map {
+    height: 62vh;
+    min-height: 380px;
+  }
+}
+</style>
