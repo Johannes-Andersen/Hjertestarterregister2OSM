@@ -1,11 +1,12 @@
 import type { AedTags } from "../types/aedTags.ts";
 import type { RegisterAed } from "../types/registerAed.ts";
+import { buildOpeningHours } from "./buildOpeningHours.ts";
 import { logger } from "./logger.ts";
 
 const log = logger.child({ util: "mapRegisterAedToOsmTags" });
 
-/** OSM enforces a 255 unicode character limit on tag values */
 const OSM_MAX_TAG_VALUE_LENGTH = 255;
+const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
 
 /**
  * Performs validation and normalization on a potential tag value from the register.
@@ -44,6 +45,7 @@ const validateTagValue = ({
 
   if (cleanedValue.length === 0) return null;
 
+  // OSM enforces a 255 unicode character limit on tag values
   if (cleanedValue.length >= OSM_MAX_TAG_VALUE_LENGTH) {
     log.warn(
       `Skipping ${tagName} for AED ${aedGuid}: value exceeds ${OSM_MAX_TAG_VALUE_LENGTH} chars (${cleanedValue.length} chars)`,
@@ -54,115 +56,85 @@ const validateTagValue = ({
   return cleanedValue;
 };
 
-type DayRange = { day: string; from?: number; to?: number };
+/**
+ * Extracts emails from the description. Looks for common email patterns.
+ * Returns an array of unique email addresses or null if none found.
+ */
+const extractEmails = ({
+  description,
+  aedGuid,
+}: {
+  description: string;
+  aedGuid: string;
+}): Array<string> | null => {
+  const matches = description.match(emailRegex);
+  if (!matches) return null;
 
-const dayRangesFromRegister = (aed: RegisterAed): DayRange[] => [
-  {
-    day: "Mo",
-    from: aed.OPENING_HOURS_MON_FROM,
-    to: aed.OPENING_HOURS_MON_TO,
-  },
-  {
-    day: "Tu",
-    from: aed.OPENING_HOURS_TUE_FROM,
-    to: aed.OPENING_HOURS_TUE_TO,
-  },
-  {
-    day: "We",
-    from: aed.OPENING_HOURS_WED_FROM,
-    to: aed.OPENING_HOURS_WED_TO,
-  },
-  {
-    day: "Th",
-    from: aed.OPENING_HOURS_THU_FROM,
-    to: aed.OPENING_HOURS_THU_TO,
-  },
-  {
-    day: "Fr",
-    from: aed.OPENING_HOURS_FRI_FROM,
-    to: aed.OPENING_HOURS_FRI_TO,
-  },
-  {
-    day: "Sa",
-    from: aed.OPENING_HOURS_SAT_FROM,
-    to: aed.OPENING_HOURS_SAT_TO,
-  },
-  {
-    day: "Su",
-    from: aed.OPENING_HOURS_SUN_FROM,
-    to: aed.OPENING_HOURS_SUN_TO,
-  },
-];
+  const emails = matches
+    .map((email) =>
+      validateTagValue({
+        value: email,
+        tagName: "email",
+        aedGuid,
+      }),
+    )
+    .filter((email): email is string => !!email);
 
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-const formatRegisterTime = (value: number | undefined): string | null => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-
-  const normalized = Math.trunc(value);
-  if (normalized < 0 || normalized > 2400) return null;
-
-  const hour = Math.floor(normalized / 100);
-  const minute = normalized % 100;
-
-  if (hour > 24) return null;
-  if (minute >= 60) return null;
-  if (hour === 24 && minute !== 0) return null;
-
-  return `${pad2(hour)}:${pad2(minute)}`;
+  return emails.length > 0 ? Array.from(new Set(emails)) : null;
 };
 
-const buildOpeningHours = (aed: RegisterAed): string | null => {
-  const entries = dayRangesFromRegister(aed)
-    .map(({ day, from, to }, index) => {
-      const fromTime = formatRegisterTime(from);
-      const toTime = formatRegisterTime(to);
-      if (!fromTime || !toTime) return null;
+/**
+ * Detect common AED cabinet information
+ */
+const detectCabinet = (
+  description: string,
+): { type: string; color: string; manufacturer: string } | null => {
+  let type = "";
+  let color = "";
+  let manufacturer = "";
 
-      return { day, interval: `${fromTime}-${toTime}`, index };
-    })
-    .filter(
-      (entry): entry is { day: string; interval: string; index: number } =>
-        !!entry,
-    );
-
-  if (!entries.length) return null;
-
-  const grouped: Array<{
-    fromDay: string;
-    toDay: string;
-    interval: string;
-    toIndex: number;
-  }> = [];
-  for (const entry of entries) {
-    const lastGroup = grouped[grouped.length - 1];
-    if (
-      lastGroup &&
-      lastGroup.interval === entry.interval &&
-      lastGroup.toIndex + 1 === entry.index
-    ) {
-      lastGroup.toDay = entry.day;
-      lastGroup.toIndex = entry.index;
-      continue;
-    }
-
-    grouped.push({
-      fromDay: entry.day,
-      toDay: entry.day,
-      interval: entry.interval,
-      toIndex: entry.index,
-    });
+  if (/Rotaid/i.test(description)) {
+    type = "twist";
+    manufacturer = "Rotaid";
   }
 
-  const parts = grouped.map(({ fromDay, toDay, interval }) => {
-    const days = fromDay === toDay ? fromDay : `${fromDay}-${toDay}`;
-    return `${days} ${interval}`;
-  });
+  if (/\bgrønt(?:\s+rundt)?(?:\s+varme)?\s*skap\b/i.test(description)) {
+    color = "green";
+  }
 
-  if (aed.OPENING_HOURS_CLOSED_HOLIDAYS === "Y") parts.push("PH off");
-  if (aed.OPENING_HOURS_CLOSED_HOLIDAYS === "N") parts.push("PH open");
+  if (!type && !color && !manufacturer) return null;
 
-  return parts.join("; ");
+  return { type, color, manufacturer };
+};
+
+/**
+ * Extracts a Norwegian phone number from a description.
+ * Looks for patterns:
+ * - xx xx xx xx
+ * - xxx xx xxx
+ * - +47 xx xx xx xx
+ * Returns deduplicated phone numbers in a standardized format or null if none found.
+ */
+const extractPhones = (description: string): Array<`+47 ${string}`> | null => {
+  const phoneRegex =
+    /(?:\+47\s?)?(\d{2}\s?\d{2}\s?\d{2}\s?\d{2}|\d{3}\s?\d{2}\s?\d{3})/g;
+  const matches = description.match(phoneRegex);
+  if (!matches) return null;
+
+  const phones = matches
+    .map((phone) => {
+      const cleanedPhone = phone.replace(/\s/g, "");
+      if (cleanedPhone.length === 8) {
+        return `+47 ${cleanedPhone.replace(/(\d{2})(\d{2})(\d{2})(\d{2})/, "$1 $2 $3 $4")}`;
+      } else if (cleanedPhone.length === 9 && cleanedPhone.startsWith("4")) {
+        return `+47 ${cleanedPhone.replace(/(\d{3})(\d{2})(\d{3})/, "$1 $2 $3")}`;
+      } else {
+        return null;
+      }
+    })
+    .filter((phone): phone is `+47 ${string}` => !!phone);
+
+  return phones.length > 0 ? Array.from(new Set(phones)) : null;
 };
 
 export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
@@ -193,8 +165,27 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
   });
   if (location) tags["defibrillator:location"] = location;
 
+  const email = extractEmails({
+    description: aed.SITE_DESCRIPTION || "",
+    aedGuid: aed.ASSET_GUID,
+  });
+  if (email && email.length > 0) tags.email = email.join("; ");
+
+  const phone = extractPhones(aed.SITE_DESCRIPTION || "");
+  if (phone && phone.length > 0) tags.phone = phone.join("; ");
+
   const openingHours = buildOpeningHours(aed);
   if (openingHours) tags.opening_hours = openingHours;
+
+  const cabinetInfo = detectCabinet(aed.SITE_DESCRIPTION || "");
+  if (cabinetInfo) {
+    if (cabinetInfo.type) tags["defibrillator:cabinet"] = cabinetInfo.type;
+    if (cabinetInfo.color)
+      tags["defibrillator:cabinet:colour"] = cabinetInfo.color;
+    if (cabinetInfo.manufacturer) {
+      tags["defibrillator:cabinet:manufacturer"] = cabinetInfo.manufacturer;
+    }
+  }
 
   return tags;
 };

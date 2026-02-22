@@ -70,6 +70,49 @@ Notes:
 - In dry-run mode, upload to OSM is skipped.
 - In live mode, planned changes are uploaded to OSM using batched changesets.
 
+## OSM Auth Token Setup (Service Account)
+
+`apps/reconciler` expects `OSM_AUTH_TOKEN` to be an OSM OAuth2 access token.
+OSM does not offer a `client_credentials` flow for map edits, so token setup is a one-time manual authorization for a dedicated OSM account.
+
+1. Create or log in to your dedicated OSM service account.
+2. Register an OAuth2 application at `https://www.openstreetmap.org/oauth2/applications/new`.
+3. Set redirect URI to `urn:ietf:wg:oauth:2.0:oob`.
+4. Request scope `write_api` (required to upload changesets).
+5. Open the authorization URL in a browser while logged in as the service account:
+
+```text
+https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id=YOUR_CLIENT_ID&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob&scope=write_api
+```
+
+6. Approve the app and copy the returned authorization code.
+7. Exchange the code for a token:
+
+```bash
+curl -sS -X POST "https://www.openstreetmap.org/oauth2/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=authorization_code" \
+  --data-urlencode "redirect_uri=urn:ietf:wg:oauth:2.0:oob" \
+  --data-urlencode "code=YOUR_AUTH_CODE" \
+  --data-urlencode "client_id=YOUR_CLIENT_ID" \
+  --data-urlencode "client_secret=YOUR_CLIENT_SECRET"
+```
+
+8. Set `OSM_AUTH_TOKEN` to the returned `access_token` value (raw token only, no `Bearer ` prefix).
+
+```bash
+OSM_AUTH_TOKEN=...
+```
+
+9. Validate token permissions:
+
+```bash
+curl -sS -H "Authorization: Bearer $OSM_AUTH_TOKEN" \
+  "https://api.openstreetmap.org/api/0.6/permissions.json"
+```
+
+Expected response should include `allow_write_api`.
+
 ## Database Setup
 
 Create the sync tables, indexes, and `pg_cron` cleanup jobs:

@@ -4,7 +4,8 @@ export interface AedTags {
   name?: string;
   opening_hours?: string;
   access?: "yes" | "no" | "customers" | "permissive" | "private";
-  phone?: `+47 ${string}`;
+  phone?: string;
+  email?: string;
   "emergency:phone": "113";
   "defibrillator:location"?: string;
   "defibrillator:code"?: string;
