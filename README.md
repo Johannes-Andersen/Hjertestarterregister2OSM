@@ -146,8 +146,8 @@ flowchart TD
 
     Extract --> DeleteRemoved["deleteRemoved<br/>(managed refs missing in registry,<br/>delete only if AED-only)"]
     DeleteRemoved --> ResolveDup["resolveDuplicates<br/>(duplicate managed refs,<br/>keep one, delete AED-only duplicates)"]
-    ResolveDup --> Update["updateExisting<br/>(skip duplicates and opt-outs,<br/>apply tag updates, move only if >50m)"]
-    Update --> Add["addNew<br/>(unmanaged merge <=15m,<br/>skip create if unmanaged <=50m,<br/>else create new node)"]
+    ResolveDup --> Update["updateExisting<br/>(skip duplicates and opt-outs,<br/>apply tag updates, move only if >100m)"]
+    Update --> Add["addNew<br/>(unmanaged merge <=175m,<br/>else create new node)"]
 
     Add --> Metrics["Aggregate task plans<br/>and add run metrics"]
     Metrics --> DeleteGuard{"Delete fraction<br/>> maxDeleteFraction?"}
@@ -195,12 +195,12 @@ flowchart TD
    - Duplicate refs are skipped (handled by step 7).
    - Opted-out nodes (`note` or `fixme`) are skipped with `osm_node_note_opt_out`.
    - Tag diffs are computed from `mapRegisterAedToOsmTags`.
-   - Location is moved only when distance exceeds `changedLocationDistanceMeters` (50 m).
-   - Distances between 2 m and 50 m create `managed_node_location_within_tolerance`.
+   - Location is moved only when distance exceeds `changedLocationDistanceMeters` (100 m).
+   - Distances between 2 m and 100 m create `managed_node_location_within_tolerance`.
    - Planned modifies use live node version from OSM.
 
 9. **Merge or create missing registry AEDs** — `addNew` iterates registry AEDs not already managed:
-   - If closest unmanaged node is within `unmanagedMergeDistanceMeters` (15 m), plan a merge (modify existing node with registry tags).
+   - If closest unmanaged node is within `unmanagedMergeDistanceMeters` (175 m), plan a merge (modify existing node with registry tags).
    - If that nearby unmanaged node is opted-out, merge is skipped with `osm_node_note_opt_out`.
    - If no nearby unmanaged node is found, create a new AED node.
 
@@ -216,8 +216,8 @@ flowchart TD
 
 | Parameter                       | Default | Description                                                                |
 | ------------------------------- | ------- | -------------------------------------------------------------------------- |
-| `changedLocationDistanceMeters` | 50 m    | Managed node is moved only if registry location differs by more than this  |
-| `unmanagedMergeDistanceMeters`  | 15 m    | Max distance to merge an unmanaged OSM node with a registry AED            |
+| `changedLocationDistanceMeters` | 100 m   | Managed node is moved only if registry location differs by more than this  |
+| `unmanagedMergeDistanceMeters`  | 175 m   | Max distance to merge an unmanaged OSM node with a registry AED            |
 | `maxDeleteFraction`             | 0.5     | Abort run if planned deletions exceed this fraction of total OSM AED nodes |
 
 See [apps/reconciler/src/config.ts](apps/reconciler/src/config.ts) for all configuration.
