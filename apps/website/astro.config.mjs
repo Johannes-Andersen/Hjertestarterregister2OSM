@@ -37,7 +37,10 @@ export default defineConfig({
       directives: [
         "default-src 'self'",
         "frame-src 'self' https://challenges.cloudflare.com",
-        "connect-src 'self' cloudflareinsights.com",
+        "connect-src 'self' cloudflareinsights.com tiles.openfreemap.org",
+        "worker-src 'self' blob:",
+        "child-src 'self' blob:",
+        "img-src 'self' data: blob:",
       ],
       scriptDirective: {
         resources: [
