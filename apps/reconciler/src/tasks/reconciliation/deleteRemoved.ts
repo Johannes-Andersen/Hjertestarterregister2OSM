@@ -1,4 +1,4 @@
-import type { RegistryAsset } from "@repo/hjertestarterregister-sdk";
+import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { ChangePlan } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { Logger } from "pino";
@@ -13,7 +13,7 @@ interface DeleteRemovedOptions {
   logger: Logger;
   runId: string;
   overpassElements: OverpassNode[];
-  registryAssets: RegistryAsset[];
+  registryAssets: PublicRegistryAsset[];
 }
 
 export const deleteRemoved = async ({

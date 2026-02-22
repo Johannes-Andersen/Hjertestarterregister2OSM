@@ -193,20 +193,6 @@ export const mapRegisterAedToOsmTags = (aed: RegisterAed): AedTags => {
   });
   if (location) tags["defibrillator:location"] = location;
 
-  const model = validateTagValue({
-    value: aed.ASSET_TYPE_NAME,
-    tagName: "model",
-    aedGuid: aed.ASSET_GUID,
-  });
-  if (model) tags.model = model;
-
-  const manufacturer = validateTagValue({
-    value: aed.MANUFACTURER_NAME,
-    tagName: "manufacturer",
-    aedGuid: aed.ASSET_GUID,
-  });
-  if (manufacturer) tags.manufacturer = manufacturer;
-
   const openingHours = buildOpeningHours(aed);
   if (openingHours) tags.opening_hours = openingHours;
 

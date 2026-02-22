@@ -10,6 +10,7 @@ import type {
   CreateMessagePayload,
   HjertestarterregisterApiClientOptions,
   OAuthAccessTokenResponse,
+  PublicAssetListResponse,
   RequestOptions,
   SearchAssetsParams,
   SinceDateParams,
@@ -97,8 +98,8 @@ export class HjertestarterregisterApiClient {
 
   async searchAssets(
     params: SearchAssetsParams = {},
-  ): Promise<AssetListResponse> {
-    return this.request<AssetListResponse>({
+  ): Promise<PublicAssetListResponse> {
+    return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/search/",
       query: params,
@@ -107,8 +108,8 @@ export class HjertestarterregisterApiClient {
 
   async searchDeletedAssets(
     params: SinceDateParams = {},
-  ): Promise<AssetListResponse> {
-    return this.request<AssetListResponse>({
+  ): Promise<PublicAssetListResponse> {
+    return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/deleted/",
       query: params,
@@ -118,7 +119,7 @@ export class HjertestarterregisterApiClient {
   async searchInactiveAssets(
     params: SinceDateParams = {},
   ): Promise<AssetListResponse> {
-    return this.request<AssetListResponse>({
+    return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/inactive/",
       query: params,

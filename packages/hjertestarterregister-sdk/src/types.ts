@@ -88,6 +88,7 @@ export interface RegistryAsset {
   DELETED_SINCE?: string;
   ACTIVE_MODIFIED_DATE?: string;
   OWNER_USER_ID?: number;
+  IS_MOBILE?: RegistryBoolean;
   [key: string]: unknown;
 }
 
@@ -95,6 +96,49 @@ export interface AssetReference {
   ASSET_ID: number;
   ASSET_GUID: string;
   OWNER_USER_ID?: number;
+}
+
+export type PublicRegistryAsset = Pick<
+  RegistryAsset,
+  | "ASSET_ID"
+  | "ASSET_GUID"
+  | "SITE_LATITUDE"
+  | "SITE_LONGITUDE"
+  | "SITE_NAME"
+  | "SITE_ADDRESS"
+  | "SITE_FLOOR_NUMBER"
+  | "SITE_POST_CODE"
+  | "SITE_POST_AREA"
+  | "SITE_DESCRIPTION"
+  | "CREATED_DATE"
+  | "MODIFIED_DATE"
+  | "IS_OPEN"
+  | "IS_OPEN_DATE"
+  | "OPENING_HOURS_TEXT"
+  | "OPENING_HOURS_LIMITED"
+  | "OPENING_HOURS_MON_FROM"
+  | "OPENING_HOURS_MON_TO"
+  | "OPENING_HOURS_TUE_FROM"
+  | "OPENING_HOURS_TUE_TO"
+  | "OPENING_HOURS_WED_FROM"
+  | "OPENING_HOURS_WED_TO"
+  | "OPENING_HOURS_THU_FROM"
+  | "OPENING_HOURS_THU_TO"
+  | "OPENING_HOURS_FRI_FROM"
+  | "OPENING_HOURS_FRI_TO"
+  | "OPENING_HOURS_SAT_FROM"
+  | "OPENING_HOURS_SAT_TO"
+  | "OPENING_HOURS_SUN_FROM"
+  | "OPENING_HOURS_SUN_TO"
+  | "OPENING_HOURS_CLOSED_HOLIDAYS"
+  | "ACTIVE_DATE_LIMITED"
+  | "IS_MOBILE"
+  | "ACTIVE_FROM_DATE"
+  | "ACTIVE_TO_DATE"
+>;
+
+export interface PublicAssetListResponse extends ApiSuccessResponse {
+  ASSETS: PublicRegistryAsset[];
 }
 
 export interface AssetListResponse extends ApiSuccessResponse {

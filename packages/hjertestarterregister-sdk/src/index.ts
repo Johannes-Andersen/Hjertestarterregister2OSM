@@ -13,6 +13,7 @@ export type {
   DateInput,
   HjertestarterregisterApiClientOptions,
   OAuthAccessTokenResponse,
+  PublicRegistryAsset,
   RegistryAsset,
   RegistryBoolean,
   RegistryBooleanInput,
