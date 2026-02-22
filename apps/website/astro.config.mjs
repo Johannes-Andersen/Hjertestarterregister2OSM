@@ -36,17 +36,16 @@ export default defineConfig({
       algorithm: "SHA-512",
       directives: [
         "default-src 'self'",
+        "object-src 'none'",
         "frame-src 'self' https://challenges.cloudflare.com",
-        "connect-src 'self' cloudflareinsights.com tiles.openfreemap.org",
-        "worker-src 'self' blob:",
-        "child-src 'self' blob:",
+        "connect-src 'self' https://cloudflareinsights.com https://tiles.openfreemap.org",
         "img-src 'self' data: blob:",
       ],
       scriptDirective: {
         resources: [
           "'self'",
-          "ajax.cloudflare.com",
-          "static.cloudflareinsights.com",
+          "https://ajax.cloudflare.com",
+          "https://static.cloudflareinsights.com",
           "https://challenges.cloudflare.com",
         ],
       },

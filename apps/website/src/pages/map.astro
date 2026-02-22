@@ -49,7 +49,8 @@ export const prerender = false;
 </Layout>
 
 <script>
-import maplibregl from "maplibre-gl";
+import maplibregl from "maplibre-gl/dist/maplibre-gl-csp";
+import maplibreglWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import opening_hours from "opening_hours";
 
@@ -236,6 +237,8 @@ const fmtDate = (v: string | null) => {
 type GeoJSONSource = maplibregl.GeoJSONSource & {
   getClusterExpansionZoom: (id: number) => Promise<number>;
 };
+
+maplibregl.setWorkerUrl(maplibreglWorkerUrl);
 
 const map = new maplibregl.Map({
   container: mapEl,
