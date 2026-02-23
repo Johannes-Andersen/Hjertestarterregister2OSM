@@ -2,28 +2,6 @@ import type { Tags, UploadResult } from "osm-api";
 
 export type { OsmFeature, OsmNode, OsmRelation, OsmWay, Tags } from "osm-api";
 
-export type CreateOperation = {
-  kind: "create";
-  node: PlannedNode;
-};
-
-export type ModifyOperation = {
-  kind: "modify";
-  before: PlannedNode;
-  after: PlannedNode;
-  tagUpdates: Record<string, string | undefined>;
-};
-
-export type DeleteOperation = {
-  kind: "delete";
-  node: PlannedNode;
-};
-
-export type PlannedOperation =
-  | CreateOperation
-  | ModifyOperation
-  | DeleteOperation;
-
 export interface OsmSdkClientOptions {
   apiUrl?: string;
   bearerToken?: string;

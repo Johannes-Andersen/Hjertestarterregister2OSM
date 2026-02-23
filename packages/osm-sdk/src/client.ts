@@ -1,6 +1,7 @@
 import {
   configure as configureOsmApi,
   getFeature,
+  getFeatures,
   type OsmNode,
   type Tags,
   uploadChangeset,
@@ -10,14 +11,14 @@ import { OsmSdkError } from "./errors.ts";
 import type {
   AppliedBatch,
   ApplyBatchedChangesArguments,
+  ChangePlan,
   OsmSdkClientOptions,
-  PlannedOperation,
 } from "./types.ts";
 import {
+  assignUniqueCreateNodeIds,
   buildChangesetComment,
   createNodeFromPlan,
   defaultCommentSubject,
-  toPlannedOperations,
 } from "./utils.ts";
 
 const configSchema = z.object({
@@ -81,12 +82,12 @@ export class OsmApiClient {
     commentSubject,
   }: ApplyBatchedChangesArguments): Promise<AppliedBatch> {
     this.ensureWriteAuthorization();
-
     this.applyLibraryConfiguration();
 
     try {
-      const operations = toPlannedOperations(changePlan);
-      if (!operations.length) {
+      const plan = assignUniqueCreateNodeIds(changePlan);
+
+      if (!plan.create.length && !plan.modify.length && !plan.delete.length) {
         return {
           changesets: {},
           createCount: 0,
@@ -95,60 +96,44 @@ export class OsmApiClient {
         };
       }
 
-      const existingNodesById = await this.loadExistingNodes(operations);
+      const existingNodesById = await this.loadExistingNodes(plan);
 
-      const createNodes: OsmNode[] = [];
-      const modifyNodes: OsmNode[] = [];
-      const deleteNodes: OsmNode[] = [];
+      const createNodes = plan.create.map((c) => createNodeFromPlan(c.node));
 
-      for (const operation of operations) {
-        if (operation.kind === "create") {
-          createNodes.push(createNodeFromPlan(operation.node));
-          continue;
+      const modifyNodes = plan.modify.map((m) => {
+        const existingNode = existingNodesById.get(m.after.id);
+        if (!existingNode) {
+          throw new OsmSdkError(`OSM node ${m.after.id} not found for modify`, {
+            nodeId: m.after.id,
+          });
         }
 
-        if (operation.kind === "modify") {
-          const existingNode = existingNodesById.get(operation.after.id);
-          if (!existingNode) {
-            throw new OsmSdkError(
-              `OSM node ${operation.after.id} not found for modify`,
-              { nodeId: operation.after.id },
-            );
-          }
-
-          const nextTags = {
-            ...(existingNode.tags ?? {}),
-          };
-
-          for (const [key, value] of Object.entries(operation.tagUpdates)) {
-            if (value === undefined) {
-              delete nextTags[key];
-              continue;
-            }
-
+        const nextTags = { ...(existingNode.tags ?? {}) };
+        for (const [key, value] of Object.entries(m.tagUpdates)) {
+          if (value === undefined) {
+            delete nextTags[key];
+          } else {
             nextTags[key] = value;
           }
-
-          modifyNodes.push({
-            ...existingNode,
-            lat: operation.after.lat,
-            lon: operation.after.lon,
-            tags: nextTags,
-          });
-
-          continue;
         }
 
-        const existingNode = existingNodesById.get(operation.node.id);
+        return {
+          ...existingNode,
+          lat: m.after.lat,
+          lon: m.after.lon,
+          tags: nextTags,
+        };
+      });
+
+      const deleteNodes = plan.delete.map((d) => {
+        const existingNode = existingNodesById.get(d.node.id);
         if (!existingNode) {
-          throw new OsmSdkError(
-            `OSM node ${operation.node.id} not found for delete`,
-            { nodeId: operation.node.id },
-          );
+          throw new OsmSdkError(`OSM node ${d.node.id} not found for delete`, {
+            nodeId: d.node.id,
+          });
         }
-
-        deleteNodes.push(existingNode);
-      }
+        return existingNode;
+      });
 
       const changesets = await uploadChangeset(
         {
@@ -161,11 +146,7 @@ export class OsmApiClient {
             commentSubject: commentSubject ?? defaultCommentSubject,
           }),
         },
-        {
-          create: createNodes,
-          modify: modifyNodes,
-          delete: deleteNodes,
-        },
+        { create: createNodes, modify: modifyNodes, delete: deleteNodes },
       );
 
       return {
@@ -203,27 +184,26 @@ export class OsmApiClient {
   }
 
   private async loadExistingNodes(
-    operations: PlannedOperation[],
+    changePlan: ChangePlan,
   ): Promise<Map<number, OsmNode>> {
-    const existingNodeIds = new Set<number>();
+    const nodeIds = new Set<number>();
 
-    for (const operation of operations) {
-      if (operation.kind === "modify") {
-        existingNodeIds.add(operation.after.id);
-        continue;
-      }
-
-      if (operation.kind === "delete") {
-        existingNodeIds.add(operation.node.id);
-      }
+    for (const modify of changePlan.modify) {
+      nodeIds.add(modify.after.id);
     }
 
-    const existingNodesById = new Map<number, OsmNode>();
-    for (const nodeId of existingNodeIds) {
-      const existingNode = await this.getNodeFeature(nodeId);
-      existingNodesById.set(nodeId, existingNode);
+    for (const deletion of changePlan.delete) {
+      nodeIds.add(deletion.node.id);
     }
 
-    return existingNodesById;
+    if (nodeIds.size === 0) return new Map();
+
+    const nodes = await getFeatures("node", [...nodeIds]);
+    const nodesById = new Map<number, OsmNode>();
+    for (const node of nodes) {
+      nodesById.set(node.id, node);
+    }
+
+    return nodesById;
   }
 }

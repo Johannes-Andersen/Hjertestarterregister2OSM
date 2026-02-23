@@ -1,9 +1,4 @@
-import type {
-  ChangePlan,
-  OsmNode,
-  PlannedNode,
-  PlannedOperation,
-} from "./types.ts";
+import type { ChangePlan, OsmNode, PlannedNode } from "./types.ts";
 
 export const defaultCommentSubject = "OSM features";
 export const operationListFormatter = new Intl.ListFormat("en", {
@@ -22,33 +17,40 @@ export const sanitizeTags = (tags: Record<string, string | undefined>) => {
   return sanitized;
 };
 
-export const toPlannedOperations = (changePlan: ChangePlan) => {
-  const operations: PlannedOperation[] = [];
+export const assignUniqueCreateNodeIds = (
+  changePlan: ChangePlan,
+): ChangePlan => {
+  const usedCreateIds = new Set<number>();
+  let nextPlaceholderId = -1;
 
-  for (const create of changePlan.create) {
-    operations.push({
-      kind: "create",
-      node: create.node,
-    });
-  }
+  return {
+    ...changePlan,
+    create: changePlan.create.map((change) => {
+      const requestedId = change.node.id;
+      const canReuseRequestedId =
+        requestedId < 0 && !usedCreateIds.has(requestedId);
 
-  for (const modify of changePlan.modify) {
-    operations.push({
-      kind: "modify",
-      before: modify.before,
-      after: modify.after,
-      tagUpdates: modify.tagUpdates,
-    });
-  }
+      let assignedId = requestedId;
+      if (!canReuseRequestedId) {
+        while (usedCreateIds.has(nextPlaceholderId)) {
+          nextPlaceholderId -= 1;
+        }
 
-  for (const deletion of changePlan.delete) {
-    operations.push({
-      kind: "delete",
-      node: deletion.node,
-    });
-  }
+        assignedId = nextPlaceholderId;
+        nextPlaceholderId -= 1;
+      }
 
-  return operations;
+      usedCreateIds.add(assignedId);
+
+      return {
+        ...change,
+        node: {
+          ...change.node,
+          id: assignedId,
+        },
+      };
+    }),
+  };
 };
 
 export const createNodeFromPlan = (plannedNode: PlannedNode): OsmNode => ({
