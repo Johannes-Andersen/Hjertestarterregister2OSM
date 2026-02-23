@@ -138,9 +138,9 @@ This creates:
 node --env-file=./apps/reconciler/.env apps/reconciler/src/index.ts
 ```
 
-## Ubuntu Deployment (Hourly)
+## Ubuntu Deployment (Every 12 Hours)
 
-Templates for a one-shot systemd service and hourly timer are included:
+Templates for a one-shot systemd service and 12-hour timer are included:
 
 - `apps/reconciler/deploy/run-reconciler.sh`
 - `apps/reconciler/deploy/reconciler.service`
@@ -177,7 +177,7 @@ sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.service
 sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.timer /etc/systemd/system/reconciler.timer
 ```
 
-7. Enable hourly runs:
+7. Enable 12-hour runs:
 
 ```bash
 sudo systemctl daemon-reload

@@ -1,8 +1,8 @@
 [Unit]
-Description=Run Hjertestarterregister Reconciler hourly
+Description=Run Hjertestarterregister Reconciler every 12 hours
 
 [Timer]
-OnCalendar=hourly
+OnCalendar=*-*-* 00,12:00:00
 Persistent=true
 RandomizedDelaySec=5m
 Unit=reconciler.service
