@@ -60,8 +60,8 @@ importers:
         specifier: 5.17.3
         version: 5.17.3(@types/node@25.2.3)(rollup@4.59.0)(typescript@5.9.3)(yaml@2.8.2)
       maplibre-gl:
-        specifier: 5.18.0
-        version: 5.18.0
+        specifier: 5.19.0
+        version: 5.19.0
       opening_hours:
         specifier: 3.11.0
         version: 3.11.0(typescript@5.9.3)
@@ -1923,8 +1923,8 @@ packages:
   magicast@0.5.2:
     resolution: {integrity: sha512-E3ZJh4J3S9KfwdjZhe2afj6R9lGIN5Pher1pF39UGrXRqq/VDaGVIGN13BjHd2u8B61hArAGOnso7nBOouW3TQ==}
 
-  maplibre-gl@5.18.0:
-    resolution: {integrity: sha512-UtWxPBpHuFvEkM+5FVfcFG9ZKEWZQI6+PZkvLErr8Zs5ux+O7/KQ3JjSUvAfOlMeMgd/77qlHpOw0yHL7JU5cw==}
+  maplibre-gl@5.19.0:
+    resolution: {integrity: sha512-REhYUN8gNP3HlcIZS6QU2uy8iovl31cXsrNDkCcqWSQbCkcpdYLczqDz5PVIwNH42UQNyvukjes/RoHPDrOUmQ==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
   markdown-table@3.0.4:
@@ -4494,7 +4494,7 @@ snapshots:
       '@babel/types': 7.29.0
       source-map-js: 1.2.1
 
-  maplibre-gl@5.18.0:
+  maplibre-gl@5.19.0:
     dependencies:
       '@mapbox/geojson-rewind': 0.5.2
       '@mapbox/jsonlint-lines-primitives': 2.0.2
