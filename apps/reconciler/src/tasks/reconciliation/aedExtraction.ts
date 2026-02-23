@@ -79,7 +79,6 @@ export const aedExtraction = async ({
         version: liveNode.version,
         tags: nextSourceNodeTags,
       },
-      tagUpdates: stripUpdates,
     });
 
     // Collect the AED tags from the existing node into a new standalone node

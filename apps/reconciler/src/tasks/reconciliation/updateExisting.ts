@@ -113,8 +113,12 @@ export const updateExisting = async ({
     if (!registerAed) continue;
 
     const mappedTags = mapRegisterAedToOsmTags(registerAed);
+
+    // Fetch the live node to get the current version and tags
+    const liveNode = await osmClient.getNodeFeature(node.id);
+
     const tagUpdates = getTagUpdates({
-      currentTags: node.tags ?? {},
+      currentTags: liveNode.tags ?? {},
       mappedTags,
     });
     const hasTagUpdates = Object.keys(tagUpdates).length > 0;
@@ -152,12 +156,9 @@ export const updateExisting = async ({
     const nextLat = shouldMoveNode ? registerAed.SITE_LATITUDE : node.lat;
     const nextLon = shouldMoveNode ? registerAed.SITE_LONGITUDE : node.lon;
     const nextNodeTags = {
-      ...(node.tags ?? {}),
+      ...(liveNode.tags ?? {}),
       ...tagUpdates,
     };
-
-    // Fetch the live node to get the current version for the modify operation
-    const liveNode = await osmClient.getNodeFeature(node.id);
 
     changePlan.modify.push({
       before: {
@@ -174,7 +175,6 @@ export const updateExisting = async ({
         version: liveNode.version,
         tags: nextNodeTags,
       },
-      tagUpdates,
     });
 
     log.debug(

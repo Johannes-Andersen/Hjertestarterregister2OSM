@@ -158,7 +158,6 @@ export const addNew = async ({
           version: liveNode.version,
           tags: nextNodeTags,
         },
-        tagUpdates: { ...mappedTags },
       });
 
       log.debug(

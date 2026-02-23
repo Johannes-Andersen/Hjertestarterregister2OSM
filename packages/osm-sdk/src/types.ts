@@ -24,7 +24,6 @@ export interface PlannedCreateChange {
 export interface PlannedModifyChange {
   before: PlannedNode;
   after: PlannedNode;
-  tagUpdates: Record<string, string | undefined>;
 }
 
 export interface PlannedDeleteChange {

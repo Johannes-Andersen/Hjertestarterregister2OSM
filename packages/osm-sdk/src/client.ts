@@ -1,7 +1,6 @@
 import {
   configure as configureOsmApi,
   getFeature,
-  getFeatures,
   type OsmNode,
   type Tags,
   uploadChangeset,
@@ -11,7 +10,6 @@ import { OsmSdkError } from "./errors.ts";
 import type {
   AppliedBatch,
   ApplyBatchedChangesArguments,
-  ChangePlan,
   OsmSdkClientOptions,
 } from "./types.ts";
 import {
@@ -96,44 +94,9 @@ export class OsmApiClient {
         };
       }
 
-      const existingNodesById = await this.loadExistingNodes(plan);
-
       const createNodes = plan.create.map((c) => createNodeFromPlan(c.node));
-
-      const modifyNodes = plan.modify.map((m) => {
-        const existingNode = existingNodesById.get(m.after.id);
-        if (!existingNode) {
-          throw new OsmSdkError(`OSM node ${m.after.id} not found for modify`, {
-            nodeId: m.after.id,
-          });
-        }
-
-        const nextTags = { ...(existingNode.tags ?? {}) };
-        for (const [key, value] of Object.entries(m.tagUpdates)) {
-          if (value === undefined) {
-            delete nextTags[key];
-          } else {
-            nextTags[key] = value;
-          }
-        }
-
-        return {
-          ...existingNode,
-          lat: m.after.lat,
-          lon: m.after.lon,
-          tags: nextTags,
-        };
-      });
-
-      const deleteNodes = plan.delete.map((d) => {
-        const existingNode = existingNodesById.get(d.node.id);
-        if (!existingNode) {
-          throw new OsmSdkError(`OSM node ${d.node.id} not found for delete`, {
-            nodeId: d.node.id,
-          });
-        }
-        return existingNode;
-      });
+      const modifyNodes = plan.modify.map((m) => createNodeFromPlan(m.after));
+      const deleteNodes = plan.delete.map((d) => createNodeFromPlan(d.node));
 
       const changesets = await uploadChangeset(
         {
@@ -181,29 +144,5 @@ export class OsmApiClient {
     throw new OsmSdkError(
       "Missing OSM auth configuration. Provide bearerToken when creating OsmApiClient.",
     );
-  }
-
-  private async loadExistingNodes(
-    changePlan: ChangePlan,
-  ): Promise<Map<number, OsmNode>> {
-    const nodeIds = new Set<number>();
-
-    for (const modify of changePlan.modify) {
-      nodeIds.add(modify.after.id);
-    }
-
-    for (const deletion of changePlan.delete) {
-      nodeIds.add(deletion.node.id);
-    }
-
-    if (nodeIds.size === 0) return new Map();
-
-    const nodes = await getFeatures("node", [...nodeIds]);
-    const nodesById = new Map<number, OsmNode>();
-    for (const node of nodes) {
-      nodesById.set(node.id, node);
-    }
-
-    return nodesById;
   }
 }
