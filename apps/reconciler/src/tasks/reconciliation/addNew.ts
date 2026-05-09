@@ -2,7 +2,6 @@ import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { ChangePlan } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { Logger } from "pino";
-import { osmClient } from "../../clients/osmClient.ts";
 import { syncStore } from "../../clients/syncStore.ts";
 import { reconcilerConfig } from "../../config.ts";
 import { toRegisterAed } from "../../types/registerAed.ts";
@@ -125,37 +124,26 @@ export const addNew = async ({
 
       // Merge: update the unmanaged node with registry info
       const mappedTags = mapRegisterAedToOsmTags(registerAed);
-      const liveNode = await osmClient.getNodeFeature(
-        nearbyStandaloneMerge.node.id,
-      );
-
-      // Guard against stale Overpass data: do not merge into mixed nodes.
-      if (!isAedOnlyNode(liveNode)) {
-        log.warn(
-          { nearbyNode: nearbyStandaloneMerge, registerAed },
-          "Skipping merge: live node is no longer standalone AED",
-        );
-        continue;
-      }
+      const mergeNode = nearbyStandaloneMerge.node;
 
       const nextNodeTags = {
-        ...(liveNode.tags ?? {}),
+        ...(mergeNode.tags ?? {}),
         ...mappedTags,
       };
 
       changePlan.modify.push({
         before: {
-          id: liveNode.id,
-          lat: liveNode.lat,
-          lon: liveNode.lon,
-          version: liveNode.version,
-          tags: { ...(liveNode.tags ?? {}) },
+          id: mergeNode.id,
+          lat: mergeNode.lat,
+          lon: mergeNode.lon,
+          version: mergeNode.version,
+          tags: { ...(mergeNode.tags ?? {}) },
         },
         after: {
-          id: liveNode.id,
-          lat: liveNode.lat,
-          lon: liveNode.lon,
-          version: liveNode.version,
+          id: mergeNode.id,
+          lat: mergeNode.lat,
+          lon: mergeNode.lon,
+          version: mergeNode.version,
           tags: nextNodeTags,
         },
       });

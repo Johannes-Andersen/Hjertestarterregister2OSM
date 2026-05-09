@@ -2,7 +2,6 @@ import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { ChangePlan } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { Logger } from "pino";
-import { osmClient } from "../../clients/osmClient.ts";
 import { syncStore } from "../../clients/syncStore.ts";
 import { isAedOnlyNode } from "../../utils/isAedOnlyNode.ts";
 import { isManagedAed } from "../../utils/isManagedAed.ts";
@@ -46,10 +45,7 @@ export const deleteRemoved = async ({
     // Still in the registry — nothing to do
     if (registryGuids.has(ref)) continue;
 
-    // Fetch the live node from OSM to get current version & tags
-    const liveNode = await osmClient.getNodeFeature(node.id);
-
-    if (!isAedOnlyNode(liveNode)) {
+    if (!isAedOnlyNode(node)) {
       log.warn({ node }, "Skipping delete: node has non-AED tags");
 
       syncStore.addRunIssue({
@@ -68,11 +64,11 @@ export const deleteRemoved = async ({
 
     changePlan.delete.push({
       node: {
-        id: liveNode.id,
-        lat: liveNode.lat,
-        lon: liveNode.lon,
-        version: liveNode.version,
-        tags: { ...(liveNode.tags ?? {}) },
+        id: node.id,
+        lat: node.lat,
+        lon: node.lon,
+        version: node.version,
+        tags: { ...(node.tags ?? {}) },
       },
     });
 

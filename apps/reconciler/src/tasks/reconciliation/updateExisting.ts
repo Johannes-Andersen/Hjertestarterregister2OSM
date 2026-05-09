@@ -2,7 +2,6 @@ import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { ChangePlan } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { Logger } from "pino";
-import { osmClient } from "../../clients/osmClient.ts";
 import { syncStore } from "../../clients/syncStore.ts";
 import { reconcilerConfig } from "../../config.ts";
 import type { AedTags } from "../../types/aedTags.ts";
@@ -114,11 +113,8 @@ export const updateExisting = async ({
 
     const mappedTags = mapRegisterAedToOsmTags(registerAed);
 
-    // Fetch the live node to get the current version and tags
-    const liveNode = await osmClient.getNodeFeature(node.id);
-
     const tagUpdates = getTagUpdates({
-      currentTags: liveNode.tags ?? {},
+      currentTags: node.tags ?? {},
       mappedTags,
     });
     const hasTagUpdates = Object.keys(tagUpdates).length > 0;
@@ -156,23 +152,23 @@ export const updateExisting = async ({
     const nextLat = shouldMoveNode ? registerAed.SITE_LATITUDE : node.lat;
     const nextLon = shouldMoveNode ? registerAed.SITE_LONGITUDE : node.lon;
     const nextNodeTags = {
-      ...(liveNode.tags ?? {}),
+      ...(node.tags ?? {}),
       ...tagUpdates,
     };
 
     changePlan.modify.push({
       before: {
-        id: liveNode.id,
-        lat: liveNode.lat,
-        lon: liveNode.lon,
-        version: liveNode.version,
-        tags: { ...(liveNode.tags ?? {}) },
+        id: node.id,
+        lat: node.lat,
+        lon: node.lon,
+        version: node.version,
+        tags: { ...(node.tags ?? {}) },
       },
       after: {
-        id: liveNode.id,
+        id: node.id,
         lat: nextLat,
         lon: nextLon,
-        version: liveNode.version,
+        version: node.version,
         tags: nextNodeTags,
       },
     });

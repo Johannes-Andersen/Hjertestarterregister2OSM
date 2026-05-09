@@ -28,7 +28,7 @@ ${buildDefibrillatorPolyQueryClauses()}
   );
 
   // print results
-  out geom;
+  out meta;
 `;
 
 export const getOsmAeds = async (): Promise<OverpassResponse> =>

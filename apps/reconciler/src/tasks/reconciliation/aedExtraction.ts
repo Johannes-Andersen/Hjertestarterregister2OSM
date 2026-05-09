@@ -2,7 +2,6 @@ import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
 import type { ChangePlan } from "@repo/osm-sdk";
 import type { OverpassNode } from "@repo/overpass-sdk";
 import type { Logger } from "pino";
-import { osmClient } from "../../clients/osmClient.ts";
 import { syncStore } from "../../clients/syncStore.ts";
 import { reconcilerConfig } from "../../config.ts";
 import { coordinateDistance } from "../../utils/coordinateDistance.ts";
@@ -154,32 +153,26 @@ export const aedExtraction = async ({
       continue;
     }
 
-    // Fetch the live node from OSM to get current version & tags
-    const liveNode = await osmClient.getNodeFeature(node.id);
-
-    // Re-check against live data
-    if (isAedOnlyNode(liveNode)) continue;
-
     // Strip AED-specific tags from the existing node
-    const stripUpdates = buildStandaloneStripTagUpdates(liveNode.tags);
+    const stripUpdates = buildStandaloneStripTagUpdates(node.tags);
     const nextSourceNodeTags = applyTagUpdates({
-      currentTags: liveNode.tags ?? {},
+      currentTags: node.tags ?? {},
       tagUpdates: stripUpdates,
     });
 
     changePlan.modify.push({
       before: {
-        id: liveNode.id,
-        lat: liveNode.lat,
-        lon: liveNode.lon,
-        version: liveNode.version,
-        tags: { ...(liveNode.tags ?? {}) },
+        id: node.id,
+        lat: node.lat,
+        lon: node.lon,
+        version: node.version,
+        tags: { ...(node.tags ?? {}) },
       },
       after: {
-        id: liveNode.id,
-        lat: liveNode.lat,
-        lon: liveNode.lon,
-        version: liveNode.version,
+        id: node.id,
+        lat: node.lat,
+        lon: node.lon,
+        version: node.version,
         tags: nextSourceNodeTags,
       },
     });
@@ -188,7 +181,7 @@ export const aedExtraction = async ({
     // placed at the registry coordinates instead of the parent node's location
     const aedTags: Record<string, string> = {};
     for (const key of Object.keys(stripUpdates)) {
-      const value = liveNode.tags?.[key];
+      const value = node.tags?.[key];
       if (value !== undefined) {
         aedTags[key] = value;
       }
