@@ -83,6 +83,10 @@ export const addNew = async ({
     (node) => !isAedOnlyNode(node),
   );
 
+  // Track nodes already claimed for merge so the same OSM node
+  // is not matched by multiple registry assets in one run.
+  const claimedNodeIds = new Set<number>();
+
   for (const asset of registryAssets) {
     const registerAed = toRegisterAed(asset);
     if (!registerAed) continue;
@@ -96,7 +100,9 @@ export const addNew = async ({
     const nearbyStandaloneMerge = findClosestNode({
       lat: registerAed.SITE_LATITUDE,
       lon: registerAed.SITE_LONGITUDE,
-      candidates: unmanagedStandaloneNodes,
+      candidates: unmanagedStandaloneNodes.filter(
+        (n) => !claimedNodeIds.has(n.id),
+      ),
       maxDistanceMeters: reconcilerConfig.unmanagedMergeDistanceMeters,
     });
 
@@ -123,6 +129,7 @@ export const addNew = async ({
       }
 
       // Merge: update the unmanaged node with registry info
+      claimedNodeIds.add(nearbyStandaloneMerge.node.id);
       const mappedTags = mapRegisterAedToOsmTags(registerAed);
       const mergeNode = nearbyStandaloneMerge.node;
 
@@ -166,7 +173,9 @@ export const addNew = async ({
     const nearbyNonStandaloneNode = findClosestNode({
       lat: registerAed.SITE_LATITUDE,
       lon: registerAed.SITE_LONGITUDE,
-      candidates: unmanagedNonStandaloneNodes,
+      candidates: unmanagedNonStandaloneNodes.filter(
+        (n) => !claimedNodeIds.has(n.id),
+      ),
       maxDistanceMeters: reconcilerConfig.unmanagedMergeDistanceMeters,
     });
     if (nearbyNonStandaloneNode) {
