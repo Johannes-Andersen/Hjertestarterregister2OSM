@@ -1,4 +1,5 @@
 ---
+import { env } from "cloudflare:workers";
 import { SyncStoreClient } from "@repo/sync-store";
 import RunIssuesTable from "../../components/runs/RunIssuesTable.astro";
 import RunOutcomes from "../../components/runs/RunOutcomes.astro";
@@ -15,7 +16,7 @@ if (!runId) {
 }
 
 const syncStore = new SyncStoreClient({
-  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  connectionString: env.HYPERDRIVE.connectionString,
   maxConnections: 1,
   ssl: import.meta.env.DEV ? "require" : false,
 });

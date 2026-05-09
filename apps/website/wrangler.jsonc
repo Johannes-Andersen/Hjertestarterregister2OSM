@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hjertestarterregister2osm",
-  "main": "./dist/_worker.js/index.js",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-01-07",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "placement": {
@@ -23,14 +23,14 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "bcf52112304449edb300c05c13ad4f9f"
+      "id": "bcf52112304449edb300c05c13ad4f9f",
+      "localConnectionString": "postgresql://user:password@localhost:5432/placeholder"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "SESSION",
-      "id": "71b7402202b0409e84674f692e67ff43",
-      "remote": true
+      "id": "71b7402202b0409e84674f692e67ff43"
     }
   ]
 }

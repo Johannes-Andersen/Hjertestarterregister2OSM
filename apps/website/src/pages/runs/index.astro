@@ -1,4 +1,5 @@
 ---
+import { env } from "cloudflare:workers";
 import { SyncStoreClient } from "@repo/sync-store";
 import RunsTable from "../../components/runs/RunsTable.astro";
 import Panel from "../../components/ui/Panel.astro";
@@ -8,7 +9,7 @@ import { formatNumber } from "../../utils/formatNumber";
 export const prerender = false;
 
 const syncStore = new SyncStoreClient({
-  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  connectionString: env.HYPERDRIVE.connectionString,
   maxConnections: 1,
   ssl: import.meta.env.DEV ? "require" : false,
 });

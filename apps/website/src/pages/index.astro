@@ -1,4 +1,5 @@
 ---
+import { env } from "cloudflare:workers";
 import { SyncStoreClient } from "@repo/sync-store";
 import IssueTypeCountList from "../components/issues/IssueTypeCountList.astro";
 import OverviewHero from "../components/overview/OverviewHero.astro";
@@ -10,7 +11,7 @@ import Layout from "../layouts/Layout.astro";
 export const prerender = false;
 
 const syncStore = new SyncStoreClient({
-  connectionString: Astro.locals.runtime.env.HYPERDRIVE.connectionString,
+  connectionString: env.HYPERDRIVE.connectionString,
   maxConnections: 1,
   ssl: import.meta.env.DEV ? "require" : false,
 });

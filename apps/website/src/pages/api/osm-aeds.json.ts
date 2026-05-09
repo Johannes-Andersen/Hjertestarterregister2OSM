@@ -181,7 +181,7 @@ const refreshCache = async (cache: RuntimeCache, key: string) => {
 };
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const cache = locals.runtime.caches.default as unknown as RuntimeCache;
+  const cache = (caches as unknown as { default: RuntimeCache }).default;
 
   const keyUrl = new URL(request.url);
   keyUrl.pathname = "/api/osm-aeds.json";
@@ -221,7 +221,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return clientResponse(cached, "RUNTIME_CACHE_HIT_FRESH", ageSec);
   }
 
-  locals.runtime.ctx.waitUntil(
+  locals.cfContext.waitUntil(
     refreshCache(cache, cacheKey).catch((err) =>
       console.warn(
         "[osm-aeds.json] Background revalidation failed:",

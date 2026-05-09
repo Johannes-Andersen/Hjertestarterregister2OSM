@@ -24,14 +24,6 @@ export default defineConfig({
         hostname: "**.johand.workers.dev",
       },
     ],
-  },
-  prefetch: {
-    defaultStrategy: "hover",
-    prefetchAll: true,
-  },
-  experimental: {
-    svgo: true,
-    chromeDevtoolsWorkspace: true,
     csp: {
       algorithm: "SHA-512",
       directives: [
@@ -50,17 +42,21 @@ export default defineConfig({
         ],
       },
     },
-    fonts: [
-      {
-        provider: fontProviders.fontsource(),
-        name: "Inter",
-        cssVariable: "--font-inter",
-        weights: [400, 600, 700],
-        styles: ["normal"],
-        subsets: ["latin"],
-        formats: ["woff2"],
-        fallbacks: ["system-ui", "sans-serif"],
-      },
-    ],
   },
+  prefetch: {
+    defaultStrategy: "hover",
+    prefetchAll: true,
+  },
+  fonts: [
+    {
+      provider: fontProviders.fontsource(),
+      name: "Inter",
+      cssVariable: "--font-inter",
+      weights: [400, 600, 700],
+      styles: ["normal"],
+      subsets: ["latin"],
+      formats: ["woff2"],
+      fallbacks: ["system-ui", "sans-serif"],
+    },
+  ],
 });
