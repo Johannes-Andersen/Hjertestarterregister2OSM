@@ -123,6 +123,8 @@ const fetchFromOverpass = async (): Promise<AedMapPayload> => {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent":
+        "Hjertestarterregister2OSM/1.0 (https://hjertestarterregister2osm.johand.dev/)",
     },
     body: new URLSearchParams({ data: OVERPASS_QUERY }),
   });
