@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@repo/typescript-config": "workspace:*",
-    "undici": "7.22.0",
-    "zod": "4.3.6"
+    "undici": "8.2.0",
+    "zod": "4.4.3"
   }
 }
