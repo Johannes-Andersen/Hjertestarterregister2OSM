@@ -239,7 +239,7 @@ flowchart TD
     LoadReg --> LoadOSM["loadOverpassData<br/>(query nwr emergency=defibrillator,<br/>filter nodes only, record osm_not_a_node issues)"]
     LoadOSM --> HasOverpass{"Any OSM AED nodes?"}
     HasOverpass -->|No| AbortNoOverpass["Abort run<br/>(safety: no Overpass AED nodes)"]
-    HasOverpass -->|Yes| Extract["aedExtraction<br/>(for non-AED-only nodes:<br/>strip AED tags + create standalone AED node)"]
+    HasOverpass -->|Yes| Extract["aedExtraction<br/>(for non-AED-only nodes with<br/>a matching registry AED:<br/>strip AED tags + create standalone<br/>AED node at registry coordinates)"]
 
     Extract --> DeleteRemoved["deleteRemoved<br/>(managed refs missing in registry,<br/>delete only if AED-only)"]
     DeleteRemoved --> ResolveDup["resolveDuplicates<br/>(duplicate managed refs,<br/>keep one, delete AED-only duplicates)"]
@@ -275,9 +275,9 @@ flowchart TD
 
 4. **Load Overpass AED elements** — `loadOverpassData` queries Overpass for `nwr["emergency"="defibrillator"]` inside the Norway polygon. Non-node elements are dropped and recorded as `osm_not_a_node` issues. If zero OSM AED nodes remain, the run aborts immediately for safety.
 
-5. **Extract standalone AEDs from mixed nodes** — `aedExtraction` scans all OSM nodes and identifies non-AED-only nodes (for example, POIs carrying both AED and primary-feature tags like `amenity` or `shop`).
+5. **Extract standalone AEDs from mixed nodes** — `aedExtraction` scans all OSM nodes and identifies non-AED-only nodes (for example, POIs carrying both AED and primary-feature tags like `amenity` or `shop`). Extraction only happens when a matching registry AED exists — managed nodes must have their `ref:hjertestarterregister` present in the registry, and unmanaged nodes must have a nearby registry AED within `unmanagedMergeDistanceMeters`.
    - Nodes with a `note` or `fixme` tag are skipped and logged as `osm_node_note_opt_out`.
-   - For other mixed nodes, the live node is fetched from OSM, AED tags are stripped from the source node, and a new standalone AED node is planned at the same coordinates.
+   - For qualifying mixed nodes, the live node is fetched from OSM, AED tags are stripped from the source node, and a new standalone AED node is planned at the **registry coordinates** (not the parent node's location).
 
 6. **Delete removed managed nodes** — `deleteRemoved` handles managed nodes (`ref:hjertestarterregister`) whose ref is no longer present in the registry:
    - The live node is fetched from OSM.

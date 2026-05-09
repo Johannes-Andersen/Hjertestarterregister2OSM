@@ -172,8 +172,9 @@ export const addNew = async ({
       continue;
     }
 
-    // If there is a nearby mixed node, wait for extraction to create a
-    // standalone AED node, then link it on the next run.
+    // If there is a nearby mixed node, aedExtraction will have planned its
+    // split in this run. The new standalone node will be visible on the next
+    // run for merging.
     const nearbyNonStandaloneNode = findClosestNode({
       lat: registerAed.SITE_LATITUDE,
       lon: registerAed.SITE_LONGITUDE,
@@ -181,9 +182,9 @@ export const addNew = async ({
       maxDistanceMeters: reconcilerConfig.unmanagedMergeDistanceMeters,
     });
     if (nearbyNonStandaloneNode) {
-      log.warn(
+      log.info(
         { nearbyNode: nearbyNonStandaloneNode, registerAed },
-        "Skipping add: nearby unmanaged node is non-standalone and should be extracted first",
+        "Skipping add: nearby mixed node will be extracted in this run and merged on the next",
       );
       continue;
     }

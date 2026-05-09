@@ -41,6 +41,7 @@ export const reconciliation = async ({ runId }: ReconciliationOptions) => {
       logger: log,
       runId,
       overpassElements,
+      registryAssets,
     });
 
     const deleteResult = await deleteRemoved({
