@@ -32,12 +32,6 @@ importers:
       '@repo/sync-store':
         specifier: workspace:*
         version: link:../../packages/sync-store
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/node':
-        specifier: 25.6.2
-        version: 25.6.2
       pino:
         specifier: 10.3.1
         version: 10.3.1
@@ -47,6 +41,13 @@ importers:
       zod:
         specifier: 4.4.3
         version: 4.4.3
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 25.6.2
+        version: 25.6.2
 
   apps/website:
     dependencies:
@@ -81,9 +82,6 @@ importers:
 
   packages/hjertestarterregister-sdk:
     dependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
       undici:
         specifier: 8.2.0
         version: 8.2.0
@@ -91,15 +89,15 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
       '@types/node':
         specifier: 25.6.2
         version: 25.6.2
 
   packages/osm-sdk:
     dependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
       osm-api:
         specifier: 4.0.0
         version: 4.0.0
@@ -107,15 +105,15 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
       '@types/node':
         specifier: 25.6.2
         version: 25.6.2
 
   packages/overpass-sdk:
     dependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
       undici:
         specifier: 8.2.0
         version: 8.2.0
@@ -123,24 +121,28 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
-      '@types/node':
-        specifier: 25.6.2
-        version: 25.6.2
-
-  packages/sync-store:
-    dependencies:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
         specifier: 25.6.2
         version: 25.6.2
+
+  packages/sync-store:
+    dependencies:
       postgres:
         specifier: 3.4.9
         version: 3.4.9
       zod:
         specifier: 4.4.3
         version: 4.4.3
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: 25.6.2
+        version: 25.6.2
 
   packages/typescript-config: {}
 

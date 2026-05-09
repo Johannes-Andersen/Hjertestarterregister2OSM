@@ -12,9 +12,11 @@
     "./schema.sql": "./schema.sql"
   },
   "dependencies": {
-    "@types/node": "25.6.2",
-    "@repo/typescript-config": "workspace:*",
     "postgres": "3.4.9",
     "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "25.6.2"
   }
 }
