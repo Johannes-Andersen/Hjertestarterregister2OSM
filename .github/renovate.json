@@ -16,6 +16,12 @@
   "reviewersFromCodeOwners": true,
   "packageRules": [
     {
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "24 hours",
+      "prCreation": "not-pending",
+      "internalChecksFilter": "strict"
+    }
+    {
       "matchManagers": ["nvm"],
       "rangeStrategy": "pin"
     },
