@@ -7,7 +7,8 @@
     "replacements:all",
     "workarounds:all",
     "helpers:pinGitHubActionDigests",
-    "customManagers:biomeVersions"
+    "customManagers:biomeVersions",
+    "security:minimumReleaseAgeNpm"
   ],
   "rollbackPrs": true,
   "prHourlyLimit": 25,
@@ -15,12 +16,6 @@
   "timezone": "Europe/Oslo",
   "reviewersFromCodeOwners": true,
   "packageRules": [
-    {
-      "matchDatasources": ["npm"],
-      "minimumReleaseAge": "24 hours",
-      "prCreation": "not-pending",
-      "internalChecksFilter": "strict"
-    },
     {
       "matchManagers": ["nvm"],
       "rangeStrategy": "pin"
