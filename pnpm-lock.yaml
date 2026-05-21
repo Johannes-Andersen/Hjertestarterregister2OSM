@@ -46,20 +46,20 @@ importers:
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
 
   apps/website:
     dependencies:
       '@astrojs/cloudflare':
         specifier: 13.5.1
-        version: 13.5.1(@types/node@25.8.0)(astro@6.3.3(@types/node@25.8.0)(rollup@4.60.4)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)(yaml@2.9.0)
+        version: 13.5.1(@types/node@25.9.0)(astro@6.3.3(@types/node@25.9.0)(rollup@4.60.4)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)(yaml@2.9.0)
       '@repo/sync-store':
         specifier: workspace:*
         version: link:../../packages/sync-store
       astro:
         specifier: 6.3.3
-        version: 6.3.3(@types/node@25.8.0)(rollup@4.60.4)(yaml@2.9.0)
+        version: 6.3.3(@types/node@25.9.0)(rollup@4.60.4)(yaml@2.9.0)
       maplibre-gl:
         specifier: 5.24.0
         version: 5.24.0
@@ -71,8 +71,8 @@ importers:
         specifier: 0.9.9
         version: 0.9.9(prettier@3.8.3)(typescript@6.0.3)
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -93,8 +93,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
 
   packages/osm-sdk:
     dependencies:
@@ -109,8 +109,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
 
   packages/overpass-sdk:
     dependencies:
@@ -125,8 +125,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
 
   packages/sync-store:
     dependencies:
@@ -141,8 +141,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
-        specifier: 25.8.0
-        version: 25.8.0
+        specifier: 25.9.0
+        version: 25.9.0
 
   packages/typescript-config: {}
 
@@ -1130,8 +1130,8 @@ packages:
   '@types/nlcst@2.0.3':
     resolution: {integrity: sha512-vSYNSDe6Ix3q+6Z7ri9lyWqgGhJTmzRjZRqyq15N0Z/1/UnVsno9G/N40NBijoYx2seFDIl0+B2mgAb9mezUCA==}
 
-  '@types/node@25.8.0':
-    resolution: {integrity: sha512-TCFSk8IZh+iLX1xtksoBVtdmgL+1IX0fC9BeU4QqFSuNdN/K+HUlhqOzEmSYYpZUVsLYcPqc9KX+60iDuninSQ==}
+  '@types/node@25.9.0':
+    resolution: {integrity: sha512-AOQwYUNolgy3VosiRqXrACUXTN8nJUtPl7FJXMqZVyxiiCLhQuG3jXKvCS1ALr+Y2OmZhzzLVlYPEqJaiqkaJQ==}
 
   '@types/supercluster@7.1.3':
     resolution: {integrity: sha512-Z0pOY34GDFl3Q6hUFYf3HkTwKEE02e7QgtJppBt+beEAxnyOpJua+voGFvxINBHa06GwLFFym7gRPY2SiKIfIA==}
@@ -2499,15 +2499,15 @@ snapshots:
       - prettier
       - prettier-plugin-astro
 
-  '@astrojs/cloudflare@13.5.1(@types/node@25.8.0)(astro@6.3.3(@types/node@25.8.0)(rollup@4.60.4)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)(yaml@2.9.0)':
+  '@astrojs/cloudflare@13.5.1(@types/node@25.9.0)(astro@6.3.3(@types/node@25.9.0)(rollup@4.60.4)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)(yaml@2.9.0)':
     dependencies:
       '@astrojs/internal-helpers': 0.9.1
       '@astrojs/underscore-redirects': 1.0.3
-      '@cloudflare/vite-plugin': 1.37.1(vite@7.3.3(@types/node@25.8.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)
-      astro: 6.3.3(@types/node@25.8.0)(rollup@4.60.4)(yaml@2.9.0)
+      '@cloudflare/vite-plugin': 1.37.1(vite@7.3.3(@types/node@25.9.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)
+      astro: 6.3.3(@types/node@25.9.0)(rollup@4.60.4)(yaml@2.9.0)
       piccolore: 0.1.3
       tinyglobby: 0.2.16
-      vite: 7.3.3(@types/node@25.8.0)(yaml@2.9.0)
+      vite: 7.3.3(@types/node@25.9.0)(yaml@2.9.0)
       wrangler: 4.92.0
     transitivePeerDependencies:
       - '@types/node'
@@ -2676,12 +2676,12 @@ snapshots:
     optionalDependencies:
       workerd: 1.20260515.1
 
-  '@cloudflare/vite-plugin@1.37.1(vite@7.3.3(@types/node@25.8.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)':
+  '@cloudflare/vite-plugin@1.37.1(vite@7.3.3(@types/node@25.9.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0)':
     dependencies:
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260515.1)
       miniflare: 4.20260515.0
       unenv: 2.0.0-rc.24
-      vite: 7.3.3(@types/node@25.8.0)(yaml@2.9.0)
+      vite: 7.3.3(@types/node@25.9.0)(yaml@2.9.0)
       wrangler: 4.92.0
       ws: 8.18.0
     transitivePeerDependencies:
@@ -3227,7 +3227,7 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
-  '@types/node@25.8.0':
+  '@types/node@25.9.0':
     dependencies:
       undici-types: 7.24.6
 
@@ -3317,7 +3317,7 @@ snapshots:
 
   array-iterate@2.0.1: {}
 
-  astro@6.3.3(@types/node@25.8.0)(rollup@4.60.4)(yaml@2.9.0):
+  astro@6.3.3(@types/node@25.9.0)(rollup@4.60.4)(yaml@2.9.0):
     dependencies:
       '@astrojs/compiler': 4.0.0
       '@astrojs/internal-helpers': 0.9.1
@@ -3369,8 +3369,8 @@ snapshots:
       unist-util-visit: 5.1.0
       unstorage: 1.17.5
       vfile: 6.0.3
-      vite: 7.3.3(@types/node@25.8.0)(yaml@2.9.0)
-      vitefu: 1.1.3(vite@7.3.3(@types/node@25.8.0)(yaml@2.9.0))
+      vite: 7.3.3(@types/node@25.9.0)(yaml@2.9.0)
+      vitefu: 1.1.3(vite@7.3.3(@types/node@25.9.0)(yaml@2.9.0))
       xxhash-wasm: 1.1.0
       yargs-parser: 22.0.0
       zod: 4.4.3
@@ -4761,7 +4761,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@7.3.3(@types/node@25.8.0)(yaml@2.9.0):
+  vite@7.3.3(@types/node@25.9.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
@@ -4770,13 +4770,13 @@ snapshots:
       rollup: 4.60.4
       tinyglobby: 0.2.16
     optionalDependencies:
-      '@types/node': 25.8.0
+      '@types/node': 25.9.0
       fsevents: 2.3.3
       yaml: 2.9.0
 
-  vitefu@1.1.3(vite@7.3.3(@types/node@25.8.0)(yaml@2.9.0)):
+  vitefu@1.1.3(vite@7.3.3(@types/node@25.9.0)(yaml@2.9.0)):
     optionalDependencies:
-      vite: 7.3.3(@types/node@25.8.0)(yaml@2.9.0)
+      vite: 7.3.3(@types/node@25.9.0)(yaml@2.9.0)
 
   volar-service-css@0.0.70(@volar/language-service@2.4.28):
     dependencies:
