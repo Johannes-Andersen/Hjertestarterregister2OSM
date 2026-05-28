@@ -1,9 +1,12 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../clients/redisClient.ts";
+import { workerPolicies } from "../config.ts";
 import { updateAssetsJobProcessor } from "../processors/updateAssetsJobProcessor.ts";
 import { logger } from "../utils/logger.ts";
 
 const log = logger.child({ module: "worker", worker: "update-assets" });
+
+const policy = workerPolicies.updateAssets;
 
 export const updateAssetsWorker = new Worker(
   "update-assets",
@@ -17,6 +20,9 @@ export const updateAssetsWorker = new Worker(
   },
   {
     connection: redisConnection,
+    lockDuration: policy.lockDuration,
+    stalledInterval: policy.stalledInterval,
+    maxStalledCount: policy.maxStalledCount,
   },
 );
 
@@ -69,5 +75,5 @@ updateAssetsWorker.on("stalled", (jobId) => {
 export const setupUpdateAssetsWorker = async () => {
   log.debug("Setting up worker");
   await updateAssetsWorker.waitUntilReady();
-  log.info("Worker ready");
+  log.info({ policy }, "Worker ready");
 };

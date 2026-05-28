@@ -1,9 +1,12 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../clients/redisClient.ts";
+import { workerPolicies } from "../config.ts";
 import { syncOsmJobProcessor } from "../processors/syncOsmJobProcessor.ts";
 import { logger } from "../utils/logger.ts";
 
 const log = logger.child({ module: "worker", worker: "sync-osm" });
+
+const policy = workerPolicies.syncOsm;
 
 export const syncOsmWorker = new Worker(
   "sync-osm",
@@ -17,6 +20,9 @@ export const syncOsmWorker = new Worker(
   },
   {
     connection: redisConnection,
+    lockDuration: policy.lockDuration,
+    stalledInterval: policy.stalledInterval,
+    maxStalledCount: policy.maxStalledCount,
   },
 );
 
@@ -69,5 +75,5 @@ syncOsmWorker.on("stalled", (jobId) => {
 export const setupSyncOsmWorker = async () => {
   log.debug("Setting up worker");
   await syncOsmWorker.waitUntilReady();
-  log.info("Worker ready");
+  log.info({ policy }, "Worker ready");
 };

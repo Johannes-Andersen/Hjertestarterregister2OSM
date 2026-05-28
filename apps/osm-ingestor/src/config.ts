@@ -8,6 +8,9 @@ try {
   // .env is optional; environment may already be populated via the platform.
 }
 
+const positiveInt = z.coerce.number().int().positive();
+const nonNegativeInt = z.coerce.number().int().min(0);
+
 const envSchema = z.object({
   DATABASE_URL: z.string().trim().min(1),
   OSM_PLANET_URL: z
@@ -53,6 +56,19 @@ const envSchema = z.object({
     .optional()
     .default("debug"),
   TZ: z.string().trim().min(1).optional().default("Europe/Oslo"),
+
+  // sync-osm policy
+  SYNC_OSM_MAX_ATTEMPTS: positiveInt.default(2),
+  SYNC_OSM_BACKOFF_DELAY_MS: nonNegativeInt.default(60_000),
+  SYNC_OSM_RATE_LIMIT_MAX: positiveInt.default(1),
+  SYNC_OSM_RATE_LIMIT_DURATION_MS: positiveInt.default(30_000),
+  SYNC_OSM_LOCK_DURATION_MS: positiveInt.default(60_000),
+  SYNC_OSM_STALLED_INTERVAL_MS: positiveInt.default(30_000),
+  SYNC_OSM_MAX_STALLED_COUNT: nonNegativeInt.default(1),
+  SYNC_OSM_REMOVE_ON_COMPLETE_AGE_S: nonNegativeInt.default(7 * 24 * 60 * 60),
+  SYNC_OSM_REMOVE_ON_COMPLETE_COUNT: nonNegativeInt.default(200),
+  SYNC_OSM_REMOVE_ON_FAIL_AGE_S: nonNegativeInt.default(30 * 24 * 60 * 60),
+  SYNC_OSM_REMOVE_ON_FAIL_COUNT: nonNegativeInt.default(500),
 });
 
 const env = envSchema.parse(process.env);
@@ -68,5 +84,35 @@ export const schedulerPatterns = {
 } as const;
 
 export const queueRateLimits = {
-  syncOsm: { max: 1, duration: 1000 },
+  syncOsm: {
+    max: env.SYNC_OSM_RATE_LIMIT_MAX,
+    duration: env.SYNC_OSM_RATE_LIMIT_DURATION_MS,
+  },
+} as const;
+
+export const jobPolicies = {
+  syncOsm: {
+    attempts: env.SYNC_OSM_MAX_ATTEMPTS,
+    backoff: {
+      type: "exponential" as const,
+      delay: env.SYNC_OSM_BACKOFF_DELAY_MS,
+    },
+    removeOnComplete: {
+      age: env.SYNC_OSM_REMOVE_ON_COMPLETE_AGE_S,
+      count: env.SYNC_OSM_REMOVE_ON_COMPLETE_COUNT,
+    },
+    removeOnFail: {
+      age: env.SYNC_OSM_REMOVE_ON_FAIL_AGE_S,
+      count: env.SYNC_OSM_REMOVE_ON_FAIL_COUNT,
+    },
+    deduplicationId: "sync-osm",
+  },
+} as const;
+
+export const workerPolicies = {
+  syncOsm: {
+    lockDuration: env.SYNC_OSM_LOCK_DURATION_MS,
+    stalledInterval: env.SYNC_OSM_STALLED_INTERVAL_MS,
+    maxStalledCount: env.SYNC_OSM_MAX_STALLED_COUNT,
+  },
 } as const;

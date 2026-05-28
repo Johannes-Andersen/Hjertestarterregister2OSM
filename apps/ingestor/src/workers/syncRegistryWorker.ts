@@ -1,9 +1,12 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../clients/redisClient.ts";
+import { workerPolicies } from "../config.ts";
 import { syncRegistryJobProcessor } from "../processors/syncRegistryJobProcessor.ts";
 import { logger } from "../utils/logger.ts";
 
 const log = logger.child({ module: "worker", worker: "sync-registry" });
+
+const policy = workerPolicies.syncRegistry;
 
 export const syncRegistryWorker = new Worker(
   "sync-registry",
@@ -17,6 +20,9 @@ export const syncRegistryWorker = new Worker(
   },
   {
     connection: redisConnection,
+    lockDuration: policy.lockDuration,
+    stalledInterval: policy.stalledInterval,
+    maxStalledCount: policy.maxStalledCount,
   },
 );
 
@@ -70,5 +76,5 @@ syncRegistryWorker.on("stalled", (jobId) => {
 export const setupSyncRegistryWorker = async () => {
   log.debug("Setting up worker");
   await syncRegistryWorker.waitUntilReady();
-  log.info("Worker ready");
+  log.info({ policy }, "Worker ready");
 };
