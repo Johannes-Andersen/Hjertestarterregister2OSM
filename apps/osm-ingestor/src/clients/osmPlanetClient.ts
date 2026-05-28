@@ -14,6 +14,7 @@ export interface OsmPlanetRemoteMetadata {
 export interface DownloadOsmPlanetFileOptions {
   sourceUrl: string;
   targetPath: string;
+  signal?: AbortSignal;
 }
 
 const parseHttpDate = (value: string | null): Date | null => {
@@ -54,8 +55,9 @@ const request = async (
 export const osmPlanetClient = {
   async getRemoteMetadata(
     sourceUrl = runtimeEnv.OSM_PLANET_URL,
+    signal?: AbortSignal,
   ): Promise<OsmPlanetRemoteMetadata> {
-    const response = await request(sourceUrl, { method: "HEAD" });
+    const response = await request(sourceUrl, { method: "HEAD", signal });
 
     return {
       sourceUrl,
@@ -68,8 +70,9 @@ export const osmPlanetClient = {
   async downloadFile({
     sourceUrl,
     targetPath,
+    signal,
   }: DownloadOsmPlanetFileOptions): Promise<void> {
-    const response = await request(sourceUrl, { method: "GET" });
+    const response = await request(sourceUrl, { method: "GET", signal });
     if (!response.body) {
       throw new Error(`OSM planet response has no body: ${sourceUrl}`);
     }
@@ -80,8 +83,16 @@ export const osmPlanetClient = {
     const writeStream = createWriteStream(partialPath);
     const reader = response.body.getReader();
 
+    const onAbort = () => {
+      reader.cancel(signal?.reason ?? new Error("Aborted")).catch(() => {});
+      writeStream.destroy(new Error("OSM planet download aborted"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+
     try {
       while (true) {
+        if (signal?.aborted) throw new Error("OSM planet download aborted");
+
         const { done, value } = await reader.read();
         if (done) break;
         if (!writeStream.write(value)) await once(writeStream, "drain");
@@ -95,6 +106,7 @@ export const osmPlanetClient = {
       await rm(partialPath, { force: true });
       throw error;
     } finally {
+      signal?.removeEventListener("abort", onAbort);
       reader.releaseLock();
     }
   },

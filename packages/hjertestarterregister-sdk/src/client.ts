@@ -7,6 +7,7 @@ import type {
   AssetListResponse,
   AssetMutationResponse,
   AssetUpsertPayload,
+  CallOptions,
   CreateMessagePayload,
   HjertestarterregisterApiClientOptions,
   OAuthAccessTokenResponse,
@@ -98,11 +99,13 @@ export class HjertestarterregisterApiClient {
 
   async searchAssets(
     params: SearchAssetsParams = {},
+    options: CallOptions = {},
   ): Promise<PublicAssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/search/",
       query: params,
+      signal: options.signal,
     });
   }
 
@@ -210,12 +213,13 @@ export class HjertestarterregisterApiClient {
     path,
     query,
     body,
+    signal,
   }: RequestOptions): Promise<TResponse> {
     const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
     const url = new URL(normalizedPath, this.baseUrl);
     applyQuery(url, query);
 
-    const bearerToken = await this.getAccessToken();
+    const bearerToken = await this.getAccessToken(signal);
     const headers = new Headers({
       Accept: "application/json",
       Authorization: `Bearer ${bearerToken}`,
@@ -233,6 +237,7 @@ export class HjertestarterregisterApiClient {
       method,
       headers,
       body: requestBody,
+      signal,
     });
 
     const text = await responseBody.text();
@@ -285,7 +290,7 @@ export class HjertestarterregisterApiClient {
     return payload as TResponse;
   }
 
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(signal?: AbortSignal): Promise<string> {
     if (
       this.cachedToken &&
       this.cachedTokenExpiresAtMs !== undefined &&
@@ -296,7 +301,7 @@ export class HjertestarterregisterApiClient {
 
     if (this.pendingTokenPromise) return this.pendingTokenPromise;
 
-    this.pendingTokenPromise = this.requestAccessToken()
+    this.pendingTokenPromise = this.requestAccessToken(signal)
       .then((tokenResponse) => {
         this.cachedToken = tokenResponse.access_token;
         this.cachedTokenExpiresAtMs =
@@ -310,7 +315,9 @@ export class HjertestarterregisterApiClient {
     return this.pendingTokenPromise;
   }
 
-  private async requestAccessToken(): Promise<OAuthAccessTokenResponse> {
+  private async requestAccessToken(
+    signal?: AbortSignal,
+  ): Promise<OAuthAccessTokenResponse> {
     const authorization = `Basic ${btoa(`${this.clientId}:${this.clientSecret}`)}`;
 
     const { statusCode, body } = await this.dispatcher.request({
@@ -325,6 +332,7 @@ export class HjertestarterregisterApiClient {
       body: new URLSearchParams({
         grant_type: "client_credentials",
       }).toString(),
+      signal,
     });
 
     const text = await body.text();

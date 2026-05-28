@@ -22,6 +22,7 @@ interface ParseOsmPlanetFileOptions {
   batchSize: number;
   onBatch: (aeds: OsmAedRow[]) => Promise<void>;
   logger?: Logger;
+  signal?: AbortSignal;
 }
 
 export interface ParseOsmPlanetFileResult {
@@ -245,6 +246,7 @@ export const parseOsmPlanetFile = async ({
   batchSize,
   onBatch,
   logger = rootLogger.child({ module: "osmPlanetParser" }),
+  signal,
 }: ParseOsmPlanetFileOptions): Promise<ParseOsmPlanetFileResult> => {
   const foundKeys: OsmAedKey[] = [];
   let norwegianAeds = 0;
@@ -284,6 +286,13 @@ export const parseOsmPlanetFile = async ({
     }),
   );
 
+  const onAbort = () => {
+    const abortError = new Error("OSM planet parse aborted");
+    sourceStream.destroy(abortError);
+    osmStream.destroy(abortError);
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+
   sourceStream.on("error", (err) => {
     logger.error({ err, filePath }, "Error reading OSM planet file stream");
     osmStream.destroy(err);
@@ -298,6 +307,9 @@ export const parseOsmPlanetFile = async ({
 
   try {
     for await (const chunk of osmStream) {
+      if (signal?.aborted) {
+        throw new Error("OSM planet parse aborted");
+      }
       if (!Array.isArray(chunk)) continue;
 
       for (const item of chunk) {
@@ -339,6 +351,8 @@ export const parseOsmPlanetFile = async ({
   } catch (error) {
     progress.finish(getProgressSnapshot());
     throw error;
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
   }
 
   return {

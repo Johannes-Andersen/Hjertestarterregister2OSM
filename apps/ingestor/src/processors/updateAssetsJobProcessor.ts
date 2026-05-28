@@ -44,15 +44,22 @@ const getUpdatedSince = async (log: Logger): Promise<string> => {
   return formatRegistryDate(latestModifiedDate);
 };
 
-export const updateAssetsJobProcessor = async (_job: Job, log: Logger) => {
+export const updateAssetsJobProcessor = async (
+  _job: Job,
+  log: Logger,
+  signal?: AbortSignal,
+) => {
   log.info("Starting incremental asset update");
 
   const updatedSince = await getUpdatedSince(log);
   log.debug({ updatedSince }, "Resolved updated_since cursor");
 
-  const { ASSETS, API_CURRENT_USER_ID } = await registerClient.searchAssets({
-    updated_since: updatedSince,
-  });
+  const { ASSETS, API_CURRENT_USER_ID } = await registerClient.searchAssets(
+    {
+      updated_since: updatedSince,
+    },
+    { signal },
+  );
 
   log.info(
     {
@@ -67,6 +74,9 @@ export const updateAssetsJobProcessor = async (_job: Job, log: Logger) => {
     log.info({ updatedSince }, "No updated assets to persist");
     return;
   }
+
+  if (signal?.aborted)
+    throw new Error("Asset update cancelled before persistence");
 
   const { aeds, invalid } = prepareAedsForStorage(ASSETS, log);
   const { upserted } = await upsertAeds(aeds);

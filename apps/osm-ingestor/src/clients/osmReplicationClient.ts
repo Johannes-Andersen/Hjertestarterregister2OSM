@@ -12,12 +12,16 @@ import {
 const normalizeBaseUrl = (baseUrl: string): string =>
   baseUrl.replace(/\/+$/, "");
 
-const fetchText = async (url: string): Promise<string> => {
+const fetchText = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<string> => {
   const response = await fetch(url, {
     headers: {
       Accept: "text/plain",
       "User-Agent": runtimeEnv.OSM_USER_AGENT,
     },
+    signal,
   });
 
   if (!response.ok) {
@@ -29,12 +33,16 @@ const fetchText = async (url: string): Promise<string> => {
   return await response.text();
 };
 
-const fetchBuffer = async (url: string): Promise<Buffer> => {
+const fetchBuffer = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<Buffer> => {
   const response = await fetch(url, {
     headers: {
       Accept: "application/gzip",
       "User-Agent": runtimeEnv.OSM_USER_AGENT,
     },
+    signal,
   });
 
   if (!response.ok) {
@@ -49,9 +57,10 @@ const fetchBuffer = async (url: string): Promise<Buffer> => {
 export const osmReplicationClient = {
   async getCurrentState(
     baseUrl = runtimeEnv.OSM_REPLICATION_BASE_URL,
+    signal?: AbortSignal,
   ): Promise<OsmReplicationState> {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-    const text = await fetchText(`${normalizedBaseUrl}/state.txt`);
+    const text = await fetchText(`${normalizedBaseUrl}/state.txt`, signal);
 
     return parseOsmReplicationState({
       source: osmMinuteReplicationSource,
@@ -63,25 +72,29 @@ export const osmReplicationClient = {
   async getChangeFile({
     baseUrl = runtimeEnv.OSM_REPLICATION_BASE_URL,
     sequenceNumber,
+    signal,
   }: {
     baseUrl?: string;
     sequenceNumber: number;
+    signal?: AbortSignal;
   }): Promise<Buffer> {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
     const path = formatOsmReplicationSequencePath(sequenceNumber);
-    return await fetchBuffer(`${normalizedBaseUrl}/${path}`);
+    return await fetchBuffer(`${normalizedBaseUrl}/${path}`, signal);
   },
 
   async getStateForSequence({
     baseUrl = runtimeEnv.OSM_REPLICATION_BASE_URL,
     sequenceNumber,
+    signal,
   }: {
     baseUrl?: string;
     sequenceNumber: number;
+    signal?: AbortSignal;
   }): Promise<OsmReplicationState> {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
     const path = formatOsmReplicationSequenceStatePath(sequenceNumber);
-    const text = await fetchText(`${normalizedBaseUrl}/${path}`);
+    const text = await fetchText(`${normalizedBaseUrl}/${path}`, signal);
 
     return parseOsmReplicationState({
       source: osmMinuteReplicationSource,

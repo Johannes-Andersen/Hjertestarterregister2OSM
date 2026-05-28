@@ -7,18 +7,25 @@ const log = logger.child({ module: "worker", worker: "sync-registry" });
 
 export const syncRegistryWorker = new Worker(
   "sync-registry",
-  async (job) => {
+  async (job, _token, signal) => {
     const jobLog = log.child({
       jobId: job.id,
       jobName: job.name,
       attempt: job.attemptsMade + 1,
     });
-    return await syncRegistryJobProcessor(job, jobLog);
+    return await syncRegistryJobProcessor(job, jobLog, signal);
   },
   {
     connection: redisConnection,
   },
 );
+
+syncRegistryWorker.on("lockRenewalFailed", (jobIds: string[]) => {
+  log.warn({ jobIds }, "Lock renewal failed; cancelling jobs");
+  for (const jobId of jobIds) {
+    syncRegistryWorker.cancelJob(jobId, "Lock renewal failed");
+  }
+});
 
 syncRegistryWorker.on("active", (job) => {
   log.info({ jobId: job.id, jobName: job.name }, "Job started");

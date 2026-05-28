@@ -7,18 +7,24 @@ const log = logger.child({ module: "worker", worker: "update-assets" });
 
 export const updateAssetsWorker = new Worker(
   "update-assets",
-  async (job) => {
+  async (job, _token, signal) => {
     const jobLog = log.child({
       jobId: job.id,
       jobName: job.name,
       attempt: job.attemptsMade + 1,
     });
-    return await updateAssetsJobProcessor(job, jobLog);
+    return await updateAssetsJobProcessor(job, jobLog, signal);
   },
   {
     connection: redisConnection,
   },
 );
+
+updateAssetsWorker.on("lockRenewalFailed", (jobIds: string[]) => {
+  log.warn({ jobIds }, "Lock renewal failed; cancelling jobs");
+  for (const jobId of jobIds)
+    updateAssetsWorker.cancelJob(jobId, "Lock renewal failed");
+});
 
 updateAssetsWorker.on("active", (job) => {
   log.info({ jobId: job.id, jobName: job.name }, "Job started");

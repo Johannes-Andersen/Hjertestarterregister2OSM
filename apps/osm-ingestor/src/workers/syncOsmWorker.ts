@@ -7,18 +7,24 @@ const log = logger.child({ module: "worker", worker: "sync-osm" });
 
 export const syncOsmWorker = new Worker(
   "sync-osm",
-  async (job) => {
+  async (job, _token, signal) => {
     const jobLog = log.child({
       jobId: job.id,
       jobName: job.name,
       attempt: job.attemptsMade + 1,
     });
-    return await syncOsmJobProcessor(job, jobLog);
+    return await syncOsmJobProcessor(job, jobLog, signal);
   },
   {
     connection: redisConnection,
   },
 );
+
+syncOsmWorker.on("lockRenewalFailed", (jobIds: string[]) => {
+  log.warn({ jobIds }, "Lock renewal failed; cancelling jobs");
+  for (const jobId of jobIds)
+    syncOsmWorker.cancelJob(jobId, "Lock renewal failed");
+});
 
 syncOsmWorker.on("active", (job) => {
   log.info({ jobId: job.id, jobName: job.name }, "Job started");

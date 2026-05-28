@@ -167,21 +167,27 @@ const applyMinutePatch = async ({
   baseUrl,
   sequenceNumber,
   log,
+  signal,
 }: {
   baseUrl: string;
   sequenceNumber: number;
   log: Logger;
+  signal?: AbortSignal;
 }): Promise<OsmReplicationState> => {
   const patchLog = log.child({ sequenceNumber });
   patchLog.debug({ baseUrl }, "Fetching OSM minute change file");
   const buffer = await osmReplicationClient.getChangeFile({
     baseUrl,
     sequenceNumber,
+    signal,
   });
   patchLog.trace({ bytes: buffer.byteLength }, "Change file downloaded");
 
   const changes = parseOsmChangeBuffer(buffer);
   const prepared = prepareOsmNodeChanges(changes);
+
+  if (signal?.aborted)
+    throw new Error(`OSM minute patch ${sequenceNumber} cancelled`);
 
   const { upserted } =
     prepared.aeds.length > 0
@@ -195,6 +201,7 @@ const applyMinutePatch = async ({
   const nextState = await osmReplicationClient.getStateForSequence({
     baseUrl,
     sequenceNumber,
+    signal,
   });
   await saveOsmReplicationState(nextState);
 
@@ -223,9 +230,11 @@ const applyMinutePatch = async ({
 const importPlanetFile = async ({
   metadata,
   log,
+  signal,
 }: {
   metadata: OsmPlanetRemoteMetadata;
   log: Logger;
+  signal?: AbortSignal;
 }) => {
   const latestPath = resolveOsmPlanetPath(runtimeEnv.OSM_PLANET_FILE_PATH);
   const downloadedPath = buildDownloadedPlanetPath({
@@ -249,9 +258,13 @@ const importPlanetFile = async ({
     await osmPlanetClient.downloadFile({
       sourceUrl: metadata.sourceUrl,
       targetPath: downloadedPath,
+      signal,
     });
     importLog.info("OSM planet file download complete");
   }
+
+  if (signal?.aborted)
+    throw new Error("OSM planet import cancelled before parsing");
 
   importLog.info(
     { batchSize: runtimeEnv.OSM_PLANET_BATCH_SIZE },
@@ -264,6 +277,7 @@ const importPlanetFile = async ({
     replicationBaseUrl: runtimeEnv.OSM_REPLICATION_BASE_URL,
     batchSize: runtimeEnv.OSM_PLANET_BATCH_SIZE,
     logger: importLog,
+    signal,
     onBatch: async (aeds) => {
       const { upserted } = await upsertOsmAeds(aeds);
       upsertedTotal += upserted;
@@ -318,9 +332,11 @@ const importPlanetFile = async ({
 const syncMinutePatches = async (
   storedState: OsmReplicationState,
   log: Logger,
+  signal?: AbortSignal,
 ) => {
   const currentState = await osmReplicationClient.getCurrentState(
     storedState.base_url,
+    signal,
   );
 
   if (storedState.sequence_number >= currentState.sequence_number) {
@@ -353,10 +369,18 @@ const syncMinutePatches = async (
     sequenceNumber <= maxSequence;
     sequenceNumber++
   ) {
+    if (signal?.aborted) {
+      log.warn(
+        { sequenceNumber },
+        "OSM minute patch loop cancelled before applying patch",
+      );
+      throw new Error("OSM minute patch loop cancelled");
+    }
     latestState = await applyMinutePatch({
       baseUrl: latestState.base_url,
       sequenceNumber,
       log,
+      signal,
     });
   }
 
@@ -371,11 +395,16 @@ const syncMinutePatches = async (
   );
 };
 
-export const syncOsmJobProcessor = async (_job: Job, log: Logger) => {
+export const syncOsmJobProcessor = async (
+  _job: Job,
+  log: Logger,
+  signal?: AbortSignal,
+) => {
   log.info("Starting OSM sync");
 
   const metadata = await osmPlanetClient.getRemoteMetadata(
     runtimeEnv.OSM_PLANET_URL,
+    signal,
   );
   log.debug(
     {
@@ -414,9 +443,9 @@ export const syncOsmJobProcessor = async (_job: Job, log: Logger) => {
       );
     }
 
-    await importPlanetFile({ metadata, log });
+    await importPlanetFile({ metadata, log, signal });
     return;
   }
 
-  await syncMinutePatches(storedState, log);
+  await syncMinutePatches(storedState, log, signal);
 };

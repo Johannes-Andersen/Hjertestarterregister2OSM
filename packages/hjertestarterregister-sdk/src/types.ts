@@ -13,6 +13,11 @@ export interface RequestOptions {
   path: string;
   query?: QueryParams;
   body?: RequestBody;
+  signal?: AbortSignal;
+}
+
+export interface CallOptions {
+  signal?: AbortSignal;
 }
 
 export type RegistryBoolean = "Y" | "N";

@@ -1,7 +1,10 @@
-import { setupSyncOsmQueue } from "./queues/syncOsmQueue.ts";
+import { sql } from "./clients/postgresClient.ts";
+import { redisConnection } from "./clients/redisClient.ts";
+import { setupSyncOsmQueue, syncOsmQueue } from "./queues/syncOsmQueue.ts";
 import { setupSyncOsmScheduler } from "./schedulers/syncOsmScheduler.ts";
 import { logger } from "./utils/logger.ts";
-import { setupSyncOsmWorker } from "./workers/syncOsmWorker.ts";
+import { installShutdownHandlers } from "./utils/shutdown.ts";
+import { setupSyncOsmWorker, syncOsmWorker } from "./workers/syncOsmWorker.ts";
 
 const log = logger.child({ module: "bootstrap" });
 
@@ -31,6 +34,19 @@ const setup = async () => {
   await setupQueues();
   await setupWorkers();
   await setupSchedulers();
+
+  installShutdownHandlers({
+    workers: [{ worker: syncOsmWorker, name: "sync-osm" }],
+    queues: [{ queue: syncOsmQueue, name: "sync-osm" }],
+    closeRedis: async () => {
+      await redisConnection.quit();
+    },
+    closePostgres: async () => {
+      await sql.end({ timeout: 5 });
+    },
+    log,
+  });
+
   log.info("OSM ingestor setup complete");
 };
 
