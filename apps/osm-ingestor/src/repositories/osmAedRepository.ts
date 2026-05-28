@@ -76,7 +76,7 @@ const upsertOsmAed = async (
       ${aed.uid},
       ${aed.user_name},
       ${aed.osm_timestamp},
-      ${JSON.stringify(aed.tags)}::jsonb,
+      ${sql.json(aed.tags)},
       NULL
     )
     ON CONFLICT (element_type, element_id) DO UPDATE SET

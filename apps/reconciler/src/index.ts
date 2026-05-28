@@ -5,33 +5,27 @@ import {
   setupReconcileChangedAedQueue,
 } from "./queues/reconcileChangedAedQueue.ts";
 import {
-  setupSyncRegistryQueue,
-  syncRegistryQueue,
-} from "./queues/syncRegistryQueue.ts";
-import {
-  setupUpdateAssetsQueue,
-  updateAssetsQueue,
-} from "./queues/updateAssetsQueue.ts";
-import { setupSyncRegistryScheduler } from "./schedulers/syncRegistryScheduler.ts";
-import { setupUpdateAssetsScheduler } from "./schedulers/updateAssetsScheduler.ts";
+  reconcileScheduledQueue,
+  setupReconcileScheduledQueue,
+} from "./queues/reconcileScheduledQueue.ts";
+import { setupReconcileScheduledScheduler } from "./schedulers/reconcileScheduledScheduler.ts";
 import { logger } from "./utils/logger.ts";
 import { installShutdownHandlers } from "./utils/shutdown.ts";
 import {
-  setupSyncRegistryWorker,
-  syncRegistryWorker,
-} from "./workers/syncRegistryWorker.ts";
+  reconcileChangedAedWorker,
+  setupReconcileChangedAedWorker,
+} from "./workers/reconcileChangedAedWorker.ts";
 import {
-  setupUpdateAssetsWorker,
-  updateAssetsWorker,
-} from "./workers/updateAssetsWorker.ts";
+  reconcileScheduledWorker,
+  setupReconcileScheduledWorker,
+} from "./workers/reconcileScheduledWorker.ts";
 
 const log = logger.child({ module: "bootstrap" });
 
 const setupQueues = async () => {
   log.debug("Setting up queues");
   await Promise.all([
-    setupSyncRegistryQueue(),
-    setupUpdateAssetsQueue(),
+    setupReconcileScheduledQueue(),
     setupReconcileChangedAedQueue(),
   ]);
   log.info("Queues ready");
@@ -39,23 +33,23 @@ const setupQueues = async () => {
 
 const setupSchedulers = async () => {
   log.debug("Setting up schedulers");
-  await Promise.all([
-    setupSyncRegistryScheduler(),
-    setupUpdateAssetsScheduler(),
-  ]);
+  await setupReconcileScheduledScheduler();
   log.info("Schedulers ready");
 };
 
 const setupWorkers = async () => {
   log.debug("Setting up workers");
-  await Promise.all([setupSyncRegistryWorker(), setupUpdateAssetsWorker()]);
+  await Promise.all([
+    setupReconcileScheduledWorker(),
+    setupReconcileChangedAedWorker(),
+  ]);
   log.info("Workers ready");
 };
 
 const setup = async () => {
   log.info(
     { nodeVersion: process.version, pid: process.pid },
-    "Starting ingestor",
+    "Starting reconciler",
   );
   await setupQueues();
   await setupWorkers();
@@ -63,12 +57,11 @@ const setup = async () => {
 
   installShutdownHandlers({
     workers: [
-      { worker: syncRegistryWorker, name: "sync-registry" },
-      { worker: updateAssetsWorker, name: "update-assets" },
+      { worker: reconcileScheduledWorker, name: "reconcile-scheduled" },
+      { worker: reconcileChangedAedWorker, name: "reconcile-changed-aed" },
     ],
     queues: [
-      { queue: syncRegistryQueue, name: "sync-registry" },
-      { queue: updateAssetsQueue, name: "update-assets" },
+      { queue: reconcileScheduledQueue, name: "reconcile-scheduled" },
       { queue: reconcileChangedAedQueue, name: "reconcile-changed-aed" },
     ],
     closeRedis: async () => {
@@ -80,7 +73,7 @@ const setup = async () => {
     log,
   });
 
-  log.info("Ingestor setup complete");
+  log.info("Reconciler setup complete");
 };
 
 process.on("uncaughtException", (err) => {
@@ -93,6 +86,6 @@ process.on("unhandledRejection", (reason) => {
 });
 
 setup().catch((err) => {
-  log.fatal({ err }, "Failed to start ingestor");
+  log.fatal({ err }, "Failed to start reconciler");
   process.exit(1);
 });

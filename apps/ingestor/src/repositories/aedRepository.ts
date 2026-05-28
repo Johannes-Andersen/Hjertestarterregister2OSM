@@ -5,6 +5,7 @@ import type { AedRow } from "../utils/transformAed.ts";
 
 interface AedPersistenceResult {
   upserted: number;
+  changedAssetIds: number[];
 }
 
 interface AedRegistrySyncResult extends AedPersistenceResult {
@@ -59,7 +60,7 @@ const upsertAed = async (db: TransactionSql, aed: AedRow): Promise<boolean> => {
       ${aed.active_to_date},
       ${aed.opening_hours_limited},
       ${aed.opening_hours_closed_holidays},
-      ${JSON.stringify(aed.opening_hours)}::jsonb,
+      ${sql.json(aed.opening_hours as unknown as Parameters<typeof sql.json>[0])},
       NULL
     )
     ON CONFLICT (asset_id) DO UPDATE SET
@@ -139,15 +140,15 @@ export const upsertAeds = async (
 ): Promise<AedPersistenceResult> => {
   await setupAedSchema();
 
-  let upserted = 0;
+  const changedAssetIds: number[] = [];
 
   await sql.begin(async (tx) => {
     for (const aed of aeds) {
-      if (await upsertAed(tx, aed)) upserted++;
+      if (await upsertAed(tx, aed)) changedAssetIds.push(aed.asset_id);
     }
   });
 
-  return { upserted };
+  return { upserted: changedAssetIds.length, changedAssetIds };
 };
 
 export const getLatestAedModifiedDate = async (): Promise<Date | null> => {
@@ -171,16 +172,17 @@ export const syncRegistryAeds = async ({
   await setupAedSchema();
 
   return await sql.begin(async (tx) => {
-    let upserted = 0;
+    const changedAssetIds: number[] = [];
 
     for (const aed of aeds) {
-      if (await upsertAed(tx, aed)) upserted++;
+      if (await upsertAed(tx, aed)) changedAssetIds.push(aed.asset_id);
     }
 
     const deleted = await markMissingAedsDeleted(tx, foundAssetIds);
 
     return {
-      upserted,
+      upserted: changedAssetIds.length,
+      changedAssetIds,
       deleted,
     };
   });

@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import type { Logger } from "pino";
 import { registerClient } from "../clients/registerClient.ts";
+import { reconcileChangedAedQueue } from "../queues/reconcileChangedAedQueue.ts";
 import {
   getLatestAedModifiedDate,
   upsertAeds,
@@ -79,7 +80,18 @@ export const updateAssetsJobProcessor = async (
     throw new Error("Asset update cancelled before persistence");
 
   const { aeds, invalid } = prepareAedsForStorage(ASSETS, log);
-  const { upserted } = await upsertAeds(aeds);
+  const { upserted, changedAssetIds } = await upsertAeds(aeds);
+
+  if (changedAssetIds.length > 0) {
+    await reconcileChangedAedQueue.add("reconcile-changed-aed", {
+      changedAssetIds,
+      source: "update-assets",
+    });
+    log.info(
+      { changedAssetIds: changedAssetIds.length },
+      "Emitted changed AEDs to reconciler",
+    );
+  }
 
   log.info(
     {

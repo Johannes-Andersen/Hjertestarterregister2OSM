@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import type { Logger } from "pino";
 import { registerClient } from "../clients/registerClient.ts";
+import { reconcileChangedAedQueue } from "../queues/reconcileChangedAedQueue.ts";
 import { syncRegistryAeds } from "../repositories/aedRepository.ts";
 import { prepareAedsForStorage } from "../utils/prepareAedsForStorage.ts";
 
@@ -34,10 +35,21 @@ export const syncRegistryJobProcessor = async (
     "Prepared AEDs for storage",
   );
 
-  const { upserted, deleted } = await syncRegistryAeds({
+  const { upserted, deleted, changedAssetIds } = await syncRegistryAeds({
     aeds,
     foundAssetIds,
   });
+
+  if (changedAssetIds.length > 0) {
+    await reconcileChangedAedQueue.add("reconcile-changed-aed", {
+      changedAssetIds,
+      source: "sync-registry",
+    });
+    log.info(
+      { changedAssetIds: changedAssetIds.length },
+      "Emitted changed AEDs to reconciler",
+    );
+  }
 
   log.info(
     {
