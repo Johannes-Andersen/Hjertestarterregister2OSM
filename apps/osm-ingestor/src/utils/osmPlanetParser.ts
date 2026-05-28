@@ -2,7 +2,9 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { clearLine, cursorTo } from "node:readline";
 import { OSMTransform } from "osm-pbf-parser-node";
+import type { Logger } from "pino";
 import type { OsmReplicationState } from "../repositories/osmAedRepository.ts";
+import { logger as rootLogger } from "./logger.ts";
 import {
   hasAedTags,
   isNorwegianAedNode,
@@ -19,6 +21,7 @@ interface ParseOsmPlanetFileOptions {
   replicationBaseUrl: string;
   batchSize: number;
   onBatch: (aeds: OsmAedRow[]) => Promise<void>;
+  logger?: Logger;
 }
 
 export interface ParseOsmPlanetFileResult {
@@ -101,23 +104,18 @@ const buildProgressLine = ({
   ].join(" | ");
 };
 
-const createProgressReporter = (totalBytes: number) => {
+const createProgressReporter = (totalBytes: number, log: Logger) => {
   const isTty = Boolean(process.stderr.isTTY);
   const startedAt = Date.now();
   let lastRenderAt = 0;
   let lastLoggedPercent = -5;
   let hasRendered = false;
 
-  const writeLine = (line: string) => {
-    if (isTty) {
-      clearLine(process.stderr, 0);
-      cursorTo(process.stderr, 0);
-      process.stderr.write(line);
-      hasRendered = true;
-      return;
-    }
-
-    console.log(line);
+  const writeTtyLine = (line: string) => {
+    clearLine(process.stderr, 0);
+    cursorTo(process.stderr, 0);
+    process.stderr.write(line);
+    hasRendered = true;
   };
 
   const render = (snapshot: ProgressSnapshot, force = false) => {
@@ -134,7 +132,25 @@ const createProgressReporter = (totalBytes: number) => {
 
     lastRenderAt = now;
     lastLoggedPercent = percent;
-    writeLine(buildProgressLine({ ...snapshot, startedAt }));
+
+    if (isTty) {
+      writeTtyLine(buildProgressLine({ ...snapshot, startedAt }));
+      return;
+    }
+
+    const elapsedSeconds = Math.max((now - startedAt) / 1000, 0.001);
+    log.info(
+      {
+        percent,
+        bytesRead: snapshot.bytesRead,
+        totalBytes: snapshot.totalBytes,
+        bytesPerSecond: Math.round(snapshot.bytesRead / elapsedSeconds),
+        scannedNodes: snapshot.scannedNodes,
+        norwegianAeds: snapshot.norwegianAeds,
+        outsideNorwayAeds: snapshot.outsideNorwayAeds,
+      },
+      "Parsing OSM planet progress",
+    );
   };
 
   const finish = (snapshot: ProgressSnapshot) => {
@@ -228,6 +244,7 @@ export const parseOsmPlanetFile = async ({
   replicationBaseUrl,
   batchSize,
   onBatch,
+  logger = rootLogger.child({ module: "osmPlanetParser" }),
 }: ParseOsmPlanetFileOptions): Promise<ParseOsmPlanetFileResult> => {
   const foundKeys: OsmAedKey[] = [];
   let norwegianAeds = 0;
@@ -238,7 +255,7 @@ export const parseOsmPlanetFile = async ({
   let batch: OsmAedRow[] = [];
   let bytesRead = 0;
   const fileStat = await stat(filePath);
-  const progress = createProgressReporter(fileStat.size);
+  const progress = createProgressReporter(fileStat.size, logger);
 
   const getProgressSnapshot = (): ProgressSnapshot => ({
     bytesRead,
@@ -267,9 +284,9 @@ export const parseOsmPlanetFile = async ({
     }),
   );
 
-  sourceStream.on("error", (error) => {
-    console.log(`Error reading OSM planet file stream: ${error}`);
-    osmStream.destroy(error);
+  sourceStream.on("error", (err) => {
+    logger.error({ err, filePath }, "Error reading OSM planet file stream");
+    osmStream.destroy(err);
   });
 
   sourceStream.on("data", (chunk) => {

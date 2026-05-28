@@ -1,15 +1,18 @@
 import { Queue } from "bullmq";
 import { queueRateLimits } from "../config.ts";
+import { logger } from "../utils/logger.ts";
+
+const log = logger.child({ module: "queue", queue: "sync-registry" });
 
 export const syncRegistryQueue = new Queue("sync-registry");
 
 export const setupSyncRegistryQueue = async () => {
-  console.log("Setting up syncRegistryQueue...");
+  log.debug("Setting up queue");
   await syncRegistryQueue.waitUntilReady();
   await syncRegistryQueue.setGlobalConcurrency(1);
   await syncRegistryQueue.setGlobalRateLimit(
     queueRateLimits.syncRegistry.max,
     queueRateLimits.syncRegistry.duration,
   );
-  console.log("syncRegistryQueue is set up and ready.");
+  log.info({ rateLimit: queueRateLimits.syncRegistry }, "Queue ready");
 };

@@ -19,6 +19,9 @@
       },
       "complexity": {
         "noUselessFragments": "off"
+      },
+      "suspicious": {
+        "noConsole": "warn"
       }
     }
   },

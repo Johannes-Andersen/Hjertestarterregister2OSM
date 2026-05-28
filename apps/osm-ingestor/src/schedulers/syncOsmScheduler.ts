@@ -1,12 +1,18 @@
 import { schedulerPatterns, timezone } from "../config.ts";
 import { syncOsmQueue } from "../queues/syncOsmQueue.ts";
+import { logger } from "../utils/logger.ts";
+
+const log = logger.child({ module: "scheduler", scheduler: "sync-osm" });
 
 export const setupSyncOsmScheduler = async () => {
-  console.log("Setting up syncOsmScheduler...");
+  log.debug("Setting up scheduler");
   await syncOsmQueue.upsertJobScheduler("sync-osm-scheduler", {
     pattern: schedulerPatterns.syncOsm,
     tz: timezone,
     immediately: true,
   });
-  console.log("syncOsmScheduler is set up and ready.");
+  log.info(
+    { pattern: schedulerPatterns.syncOsm, tz: timezone, immediately: true },
+    "Scheduler ready",
+  );
 };

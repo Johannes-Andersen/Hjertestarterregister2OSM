@@ -1,34 +1,49 @@
 import { setupSyncOsmQueue } from "./queues/syncOsmQueue.ts";
 import { setupSyncOsmScheduler } from "./schedulers/syncOsmScheduler.ts";
+import { logger } from "./utils/logger.ts";
 import { setupSyncOsmWorker } from "./workers/syncOsmWorker.ts";
 
+const log = logger.child({ module: "bootstrap" });
+
 const setupQueues = async () => {
-  console.log("Setting up queues...");
+  log.debug("Setting up queues");
   await setupSyncOsmQueue();
-  console.log("Queues are set up and ready.");
+  log.info("Queues ready");
 };
 
 const setupSchedulers = async () => {
-  console.log("Setting up schedulers...");
+  log.debug("Setting up schedulers");
   await setupSyncOsmScheduler();
-  console.log("Schedulers are set up and ready.");
+  log.info("Schedulers ready");
 };
 
 const setupWorkers = async () => {
-  console.log("Setting up workers...");
+  log.debug("Setting up workers");
   await setupSyncOsmWorker();
-  console.log("Workers are set up and ready.");
+  log.info("Workers ready");
 };
 
 const setup = async () => {
-  console.log("Setting up OSM ingestor...");
+  log.info(
+    { nodeVersion: process.version, pid: process.pid },
+    "Starting OSM ingestor",
+  );
   await setupQueues();
   await setupWorkers();
   await setupSchedulers();
-  console.log("Setup complete. OSM ingestor is ready to run.");
+  log.info("OSM ingestor setup complete");
 };
 
-setup().catch((error) => {
-  console.error("Error setting up the OSM ingestor:", error);
+process.on("uncaughtException", (err) => {
+  log.fatal({ err }, "Uncaught exception");
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  log.fatal({ err: reason }, "Unhandled promise rejection");
+  process.exit(1);
+});
+
+setup().catch((err) => {
+  log.fatal({ err }, "Failed to start OSM ingestor");
   process.exit(1);
 });

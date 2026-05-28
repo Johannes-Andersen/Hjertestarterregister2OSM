@@ -1,4 +1,5 @@
 import type { Job } from "bullmq";
+import type { Logger } from "pino";
 import { registerClient } from "../clients/registerClient.ts";
 import {
   getLatestAedModifiedDate,
@@ -32,28 +33,51 @@ const formatRegistryDate = (date: Date): string => {
   return `${pad2(date.getUTCDate())}-${month}-${date.getUTCFullYear()}`;
 };
 
-const getUpdatedSince = async (): Promise<string> => {
+const getUpdatedSince = async (log: Logger): Promise<string> => {
   const latestModifiedDate = await getLatestAedModifiedDate();
-  return latestModifiedDate
-    ? formatRegistryDate(latestModifiedDate)
-    : formatRegistryDate(new Date());
+  if (!latestModifiedDate) {
+    log.warn(
+      "No latest AED modified_date in database; falling back to today's date",
+    );
+    return formatRegistryDate(new Date());
+  }
+  return formatRegistryDate(latestModifiedDate);
 };
 
-export const updateAssetsJobProcessor = async (job: Job) => {
-  console.log(`updateAssetsJobProcessor received job ${job.id}`);
-  const updatedSince = await getUpdatedSince();
+export const updateAssetsJobProcessor = async (_job: Job, log: Logger) => {
+  log.info("Starting incremental asset update");
+
+  const updatedSince = await getUpdatedSince(log);
+  log.debug({ updatedSince }, "Resolved updated_since cursor");
+
   const { ASSETS, API_CURRENT_USER_ID } = await registerClient.searchAssets({
     updated_since: updatedSince,
   });
 
-  console.log(
-    `Fetched using ${API_CURRENT_USER_ID} and got ${ASSETS.length} assets updated since ${updatedSince}.`,
+  log.info(
+    {
+      apiUserId: API_CURRENT_USER_ID,
+      assetCount: ASSETS.length,
+      updatedSince,
+    },
+    "Fetched updated assets from registry",
   );
 
-  const { aeds, invalid } = prepareAedsForStorage(ASSETS);
+  if (ASSETS.length === 0) {
+    log.info({ updatedSince }, "No updated assets to persist");
+    return;
+  }
+
+  const { aeds, invalid } = prepareAedsForStorage(ASSETS, log);
   const { upserted } = await upsertAeds(aeds);
 
-  console.log(
-    `Stored ${upserted} updated AEDs and skipped ${invalid} invalid AEDs.`,
+  log.info(
+    {
+      upserted,
+      invalid,
+      total: ASSETS.length,
+      updatedSince,
+    },
+    "Asset update completed",
   );
 };

@@ -1,6 +1,8 @@
 import { readdir, rm } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Logger } from "pino";
+import { logger as rootLogger } from "./logger.ts";
 
 const appRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -36,9 +38,11 @@ export const buildDownloadedPlanetPath = ({
 export const pruneOldPlanetFiles = async ({
   latestPath,
   retainDownloads,
+  logger = rootLogger.child({ module: "osmPlanetFiles" }),
 }: {
   latestPath: string;
   retainDownloads: number;
+  logger?: Logger;
 }): Promise<void> => {
   const directory = dirname(latestPath);
   const latestFilename = basename(latestPath);
@@ -62,6 +66,6 @@ export const pruneOldPlanetFiles = async ({
   for (const filename of planetFiles.slice(retainDownloads)) {
     const path = join(directory, filename);
     await rm(path, { force: true });
-    console.log(`Removed old OSM planet file: ${path}`);
+    logger.info({ path }, "Removed old OSM planet file");
   }
 };

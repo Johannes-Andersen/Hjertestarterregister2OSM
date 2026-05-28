@@ -1,4 +1,6 @@
 import type { PublicRegistryAsset } from "@repo/hjertestarterregister-sdk";
+import type { Logger } from "pino";
+import { logger as rootLogger } from "./logger.ts";
 import { type AedRow, transformAedForStorage } from "./transformAed.ts";
 import { validateAedData } from "./validateAed.ts";
 
@@ -15,6 +17,7 @@ const getAssetId = (asset: PublicRegistryAsset): number | null =>
 
 export const prepareAedsForStorage = (
   assets: PublicRegistryAsset[],
+  log: Logger = rootLogger.child({ module: "prepareAedsForStorage" }),
 ): PreparedAeds => {
   const aeds: AedRow[] = [];
   const foundAssetIds = new Set<number>();
@@ -27,9 +30,12 @@ export const prepareAedsForStorage = (
     try {
       const validatedAsset = validateAedData(asset);
       aeds.push(transformAedForStorage(validatedAsset));
-    } catch (error) {
+    } catch (err) {
       invalid++;
-      console.error("Validation failed for asset:", asset, "Error:", error);
+      log.warn(
+        { err, assetId, assetGuid: asset.ASSET_GUID },
+        "Asset failed validation; skipping",
+      );
     }
   }
 

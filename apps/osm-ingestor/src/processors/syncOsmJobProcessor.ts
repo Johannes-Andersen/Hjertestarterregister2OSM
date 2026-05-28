@@ -1,5 +1,6 @@
 import { stat } from "node:fs/promises";
 import type { Job } from "bullmq";
+import type { Logger } from "pino";
 import {
   type OsmPlanetRemoteMetadata,
   osmPlanetClient,
@@ -100,20 +101,6 @@ const isSameRemoteBuild = ({
   return true;
 };
 
-const describeRemoteBuild = (metadata: OsmPlanetRemoteMetadata): string =>
-  [
-    `url=${metadata.sourceUrl}`,
-    metadata.etag ? `etag=${metadata.etag}` : null,
-    metadata.lastModified
-      ? `lastModified=${metadata.lastModified.toISOString()}`
-      : null,
-    metadata.contentLength !== null
-      ? `contentLength=${metadata.contentLength}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
 const changeToNode = (change: OsmNodeChange): OsmNodeLike | null => {
   if (change.lat === null || change.lon === null) return null;
 
@@ -179,14 +166,20 @@ const prepareOsmNodeChanges = (
 const applyMinutePatch = async ({
   baseUrl,
   sequenceNumber,
+  log,
 }: {
   baseUrl: string;
   sequenceNumber: number;
+  log: Logger;
 }): Promise<OsmReplicationState> => {
+  const patchLog = log.child({ sequenceNumber });
+  patchLog.debug({ baseUrl }, "Fetching OSM minute change file");
   const buffer = await osmReplicationClient.getChangeFile({
     baseUrl,
     sequenceNumber,
   });
+  patchLog.trace({ bytes: buffer.byteLength }, "Change file downloaded");
+
   const changes = parseOsmChangeBuffer(buffer);
   const prepared = prepareOsmNodeChanges(changes);
 
@@ -205,16 +198,23 @@ const applyMinutePatch = async ({
   });
   await saveOsmReplicationState(nextState);
 
-  console.log(
-    [
-      `Applied OSM minute patch ${sequenceNumber}.`,
-      `Node changes: ${prepared.nodeChanges}.`,
-      `Upserted: ${upserted}.`,
-      `Deleted: ${deleted}.`,
-      `Norwegian AED changes: ${prepared.norwegianAeds}.`,
-      `Outside Norway AED changes: ${prepared.outsideNorwayAeds}.`,
-      `Skipped missing coordinates: ${prepared.skippedMissingCoordinates}.`,
-    ].join(" "),
+  if (prepared.skippedMissingCoordinates > 0) {
+    patchLog.warn(
+      { skippedMissingCoordinates: prepared.skippedMissingCoordinates },
+      "Skipped AED changes due to missing coordinates",
+    );
+  }
+
+  patchLog.info(
+    {
+      nodeChanges: prepared.nodeChanges,
+      upserted,
+      deleted,
+      norwegianAeds: prepared.norwegianAeds,
+      outsideNorwayAeds: prepared.outsideNorwayAeds,
+      skippedMissingCoordinates: prepared.skippedMissingCoordinates,
+    },
+    "Applied OSM minute patch",
   );
 
   return nextState;
@@ -222,34 +222,48 @@ const applyMinutePatch = async ({
 
 const importPlanetFile = async ({
   metadata,
+  log,
 }: {
   metadata: OsmPlanetRemoteMetadata;
+  log: Logger;
 }) => {
   const latestPath = resolveOsmPlanetPath(runtimeEnv.OSM_PLANET_FILE_PATH);
   const downloadedPath = buildDownloadedPlanetPath({
     latestPath,
     remoteLastModified: metadata.lastModified,
   });
+  const importLog = log.child({ planetPath: downloadedPath });
 
   if (await fileExists(downloadedPath)) {
-    console.log(`Using existing OSM planet file at ${downloadedPath}`);
+    importLog.info("Using cached OSM planet file");
   } else {
-    console.log(
-      `Downloading OSM planet file from ${metadata.sourceUrl} to ${downloadedPath}`,
+    importLog.info(
+      {
+        sourceUrl: metadata.sourceUrl,
+        contentLength: metadata.contentLength,
+        remoteLastModified: metadata.lastModified,
+        etag: metadata.etag,
+      },
+      "Downloading OSM planet file",
     );
     await osmPlanetClient.downloadFile({
       sourceUrl: metadata.sourceUrl,
       targetPath: downloadedPath,
     });
+    importLog.info("OSM planet file download complete");
   }
 
-  console.log(`Starting full OSM planet import from ${downloadedPath}`);
+  importLog.info(
+    { batchSize: runtimeEnv.OSM_PLANET_BATCH_SIZE },
+    "Starting full OSM planet import",
+  );
 
   let upsertedTotal = 0;
   const result = await parseOsmPlanetFile({
     filePath: downloadedPath,
     replicationBaseUrl: runtimeEnv.OSM_REPLICATION_BASE_URL,
     batchSize: runtimeEnv.OSM_PLANET_BATCH_SIZE,
+    logger: importLog,
     onBatch: async (aeds) => {
       const { upserted } = await upsertOsmAeds(aeds);
       upsertedTotal += upserted;
@@ -284,30 +298,35 @@ const importPlanetFile = async ({
   await pruneOldPlanetFiles({
     latestPath,
     retainDownloads: runtimeEnv.OSM_PLANET_RETAIN_DOWNLOADS,
+    logger: importLog,
   });
 
-  console.log(
-    [
-      "Finished full OSM planet import.",
-      `Norwegian AEDs: ${result.norwegianAeds}.`,
-      `Outside Norway AEDs: ${result.outsideNorwayAeds}.`,
-      `Scanned nodes: ${result.scannedNodes}.`,
-      `Skipped non-node AED elements: ${result.skippedNonNodeAeds}.`,
-      `Upserted: ${upsertedTotal}.`,
-      `Deleted missing: ${deleted}.`,
-      `Replication sequence: ${result.replicationState.sequence_number}.`,
-    ].join(" "),
+  importLog.info(
+    {
+      norwegianAeds: result.norwegianAeds,
+      outsideNorwayAeds: result.outsideNorwayAeds,
+      scannedNodes: result.scannedNodes,
+      skippedNonNodeAeds: result.skippedNonNodeAeds,
+      upserted: upsertedTotal,
+      deletedMissing: deleted,
+      replicationSequence: result.replicationState.sequence_number,
+    },
+    "Finished full OSM planet import",
   );
 };
 
-const syncMinutePatches = async (storedState: OsmReplicationState) => {
+const syncMinutePatches = async (
+  storedState: OsmReplicationState,
+  log: Logger,
+) => {
   const currentState = await osmReplicationClient.getCurrentState(
     storedState.base_url,
   );
 
   if (storedState.sequence_number >= currentState.sequence_number) {
-    console.log(
-      `OSM replication is up to date at sequence ${storedState.sequence_number}.`,
+    log.debug(
+      { sequenceNumber: storedState.sequence_number },
+      "OSM replication is up to date",
     );
     return;
   }
@@ -316,6 +335,17 @@ const syncMinutePatches = async (storedState: OsmReplicationState) => {
     currentState.sequence_number,
     storedState.sequence_number + runtimeEnv.OSM_MAX_MINUTE_PATCHES_PER_JOB,
   );
+  const totalPatches = maxSequence - storedState.sequence_number;
+  log.info(
+    {
+      fromSequence: storedState.sequence_number,
+      toSequence: maxSequence,
+      currentSourceSequence: currentState.sequence_number,
+      patches: totalPatches,
+    },
+    "Applying OSM minute patches",
+  );
+
   let latestState = storedState;
 
   for (
@@ -326,19 +356,35 @@ const syncMinutePatches = async (storedState: OsmReplicationState) => {
     latestState = await applyMinutePatch({
       baseUrl: latestState.base_url,
       sequenceNumber,
+      log,
     });
   }
 
-  console.log(
-    `OSM replication advanced from sequence ${storedState.sequence_number} to ${latestState.sequence_number}. Current source sequence is ${currentState.sequence_number}.`,
+  log.info(
+    {
+      fromSequence: storedState.sequence_number,
+      toSequence: latestState.sequence_number,
+      currentSourceSequence: currentState.sequence_number,
+      lagBehind: currentState.sequence_number - latestState.sequence_number,
+    },
+    "OSM replication advanced",
   );
 };
 
-export const syncOsmJobProcessor = async (job: Job) => {
-  console.log(`syncOsmJobProcessor received job ${job.id}`);
+export const syncOsmJobProcessor = async (_job: Job, log: Logger) => {
+  log.info("Starting OSM sync");
 
   const metadata = await osmPlanetClient.getRemoteMetadata(
     runtimeEnv.OSM_PLANET_URL,
+  );
+  log.debug(
+    {
+      sourceUrl: metadata.sourceUrl,
+      etag: metadata.etag,
+      lastModified: metadata.lastModified,
+      contentLength: metadata.contentLength,
+    },
+    "Fetched OSM planet remote metadata",
   );
   const [planetState, storedState] = await Promise.all([
     getOsmPlanetImportState(metadata.sourceUrl),
@@ -351,18 +397,26 @@ export const syncOsmJobProcessor = async (job: Job) => {
 
   if (shouldRunFullImport) {
     if (!storedState) {
-      console.log(
-        "Missing OSM replication state; running a full planet import before minute patches.",
+      log.info(
+        "Missing OSM replication state; running a full planet import before minute patches",
       );
     } else {
-      console.log(
-        `Detected a new OSM planet build; running a full import instead of minute patches. ${describeRemoteBuild(metadata)}`,
+      log.info(
+        {
+          previousEtag: planetState?.remote_etag ?? null,
+          previousLastModified: planetState?.remote_last_modified ?? null,
+          previousContentLength: planetState?.remote_content_length ?? null,
+          currentEtag: metadata.etag,
+          currentLastModified: metadata.lastModified,
+          currentContentLength: metadata.contentLength,
+        },
+        "Detected a new OSM planet build; running a full import instead of minute patches",
       );
     }
 
-    await importPlanetFile({ metadata });
+    await importPlanetFile({ metadata, log });
     return;
   }
 
-  await syncMinutePatches(storedState);
+  await syncMinutePatches(storedState, log);
 };

@@ -7,10 +7,22 @@
  *   pnpm --filter osm-ingestor sync-region-filter
  */
 
+/**
+ * Manually-run script that fetches an administrative boundary (or any other
+ * OSM relation/way/node geometry) from Nominatim and writes the raw GeoJSON
+ * FeatureCollection to disk for use as an AED region filter.
+ *
+ * Run with:
+ *   pnpm --filter osm-ingestor sync-region-filter
+ */
+
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runtimeEnv } from "../src/config.ts";
+import { logger } from "../src/utils/logger.ts";
+
+const log = logger.child({ module: "syncRegionFilter" });
 
 const appRoot = fileURLToPath(new URL("../", import.meta.url));
 
@@ -28,7 +40,10 @@ const outputPath = isAbsolute(regionFilterFilePath)
   : join(appRoot, regionFilterFilePath);
 
 const main = async () => {
-  console.log(`Fetching region filter for ${regionOsmId} from ${nominatimUrl}`);
+  log.info(
+    { regionOsmId, url: nominatimUrl.toString() },
+    "Fetching region filter from Nominatim",
+  );
   const response = await fetch(nominatimUrl, {
     headers: { "User-Agent": userAgent, Accept: "application/json" },
   });
@@ -51,20 +66,25 @@ const main = async () => {
     );
   }
 
-  const geometryTypes = parsed.features
-    .map((feature) => feature.geometry?.type ?? "<missing>")
-    .join(", ");
+  const geometryTypes = parsed.features.map(
+    (feature) => feature.geometry?.type ?? "<missing>",
+  );
 
   await mkdir(dirname(outputPath), { recursive: true });
   // Pretty-print to keep diffs readable.
   await writeFile(outputPath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
 
-  console.log(
-    `Wrote ${outputPath} (${parsed.features.length} feature(s): ${geometryTypes})`,
+  log.info(
+    {
+      outputPath,
+      featureCount: parsed.features.length,
+      geometryTypes,
+    },
+    "Wrote region filter file",
   );
 };
 
-main().catch((error) => {
-  console.error("Failed to sync region filter:", error);
+main().catch((err) => {
+  log.fatal({ err }, "Failed to sync region filter");
   process.exit(1);
 });

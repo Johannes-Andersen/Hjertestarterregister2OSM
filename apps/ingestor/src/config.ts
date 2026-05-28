@@ -3,11 +3,9 @@ import { fileURLToPath } from "node:url";
 import * as z from "zod";
 
 try {
-  console.log("Loading environment variables...");
   loadEnvFile(fileURLToPath(new URL("../.env", import.meta.url)));
-  console.log("Environment variables loaded successfully.");
-} catch (error) {
-  console.error("Failed to load environment variables:", error);
+} catch {
+  // .env is optional; environment may already be populated via the platform.
 }
 
 const envSchema = z.object({
