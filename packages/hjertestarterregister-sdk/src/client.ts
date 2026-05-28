@@ -111,7 +111,7 @@ export class HjertestarterregisterApiClient {
   ): Promise<PublicAssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
-      path: "assets/deleted/",
+      path: "assets/deleted",
       query: params,
     });
   }
@@ -121,7 +121,7 @@ export class HjertestarterregisterApiClient {
   ): Promise<AssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
-      path: "assets/inactive/",
+      path: "assets/inactive",
       query: params,
     });
   }

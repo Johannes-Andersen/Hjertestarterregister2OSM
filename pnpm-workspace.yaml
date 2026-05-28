@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  msgpackr-extract: true
   sharp: true
   workerd: true
 minimumReleaseAge: 1440

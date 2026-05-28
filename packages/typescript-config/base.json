@@ -6,7 +6,7 @@
     "esModuleInterop": true,
     "incremental": false,
     "isolatedModules": true,
-    "lib": ["es2025", "DOM"],
+    "lib": ["es2025", "DOM", "ESNext.Temporal"],
     "module": "NodeNext",
     "moduleDetection": "force",
     "moduleResolution": "NodeNext",
