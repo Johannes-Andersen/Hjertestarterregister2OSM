@@ -13,12 +13,8 @@ This repo uses `pnpm` workspaces + Turborepo.
 
 | Path                                 | Description                                                  |
 | ------------------------------------ | ------------------------------------------------------------ |
-| `apps/reconciler`                    | Sync worker that reconciles registry data with OSM           |
-| `apps/website`                       | Astro dashboard deployed on Cloudflare Workers               |
 | `packages/hjertestarterregister-sdk` | Typed API client for the registry (OAuth + assets endpoints) |
-| `packages/overpass-sdk`              | Typed Overpass API client with retries                       |
 | `packages/osm-sdk`                   | Typed OSM API client                                         |
-| `packages/sync-store`                | PostgreSQL data layer for runs and issues                    |
 | `packages/typescript-config`         | Shared TypeScript configs                                    |
 
 ## Prerequisites
