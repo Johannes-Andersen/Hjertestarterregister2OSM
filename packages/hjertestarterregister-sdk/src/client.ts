@@ -1,4 +1,4 @@
-import { Agent, Headers, RetryAgent } from "undici";
+import { Agent, Headers } from "undici";
 import * as z from "zod";
 import { HjertestarterregisterApiError } from "./errors.ts";
 import type {
@@ -39,7 +39,6 @@ const configSchema = z.object({
     .default("https://hjertestarterregister.113.no/ords/api/oauth/token"),
   clientId: z.string().min(1),
   clientSecret: z.string().min(1),
-  maxRetries: z.int().nonnegative().default(3),
 });
 
 export class HjertestarterregisterApiClient {
@@ -48,7 +47,7 @@ export class HjertestarterregisterApiClient {
 
   private readonly clientId: string;
   private readonly clientSecret: string;
-  private readonly dispatcher: RetryAgent;
+  private readonly dispatcher: Agent;
 
   private cachedToken?: string;
   private cachedTokenExpiresAtMs?: number;
@@ -60,41 +59,7 @@ export class HjertestarterregisterApiClient {
     this.oauthTokenUrl = new URL(config.oauthTokenUrl);
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-
-    this.dispatcher = new RetryAgent(new Agent(), {
-      maxRetries: config.maxRetries,
-      throwOnError: false,
-      retry: (error, context, callback) => {
-        const {
-          state,
-          opts: { retryOptions },
-        } = context;
-
-        const maxRetries = retryOptions?.maxRetries || config.maxRetries;
-        const minTimeout = retryOptions?.minTimeout || 1000;
-        const timeoutFactor = retryOptions?.timeoutFactor || 2;
-        const maxTimeout = retryOptions?.maxTimeout || 30_000;
-
-        const errorCode = (error as { code?: string }).code;
-        const statusCode = (error as { statusCode?: number }).statusCode;
-
-        console.warn(
-          `[hjertestarterregister-sdk] retry ${state.counter}/${maxRetries} ` +
-            `(code=${errorCode ?? "-"} status=${statusCode ?? "-"}) ` +
-            `${error.message}`,
-        );
-
-        if (state.counter >= maxRetries) return callback(error);
-
-        const delayMs = Math.min(
-          minTimeout * timeoutFactor ** state.counter,
-          maxTimeout,
-        );
-
-        state.counter++;
-        setTimeout(() => callback(null), delayMs);
-      },
-    });
+    this.dispatcher = new Agent();
   }
 
   async searchAssets(
@@ -284,8 +249,6 @@ export class HjertestarterregisterApiClient {
         },
       );
     }
-
-    console.log(`Successful ${method} request to ${url.pathname}`);
 
     return payload as TResponse;
   }
