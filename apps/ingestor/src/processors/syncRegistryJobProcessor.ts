@@ -6,7 +6,7 @@ import { prepareAedsForStorage } from "../utils/prepareAedsForStorage.ts";
 export const syncRegistryJobProcessor = async (job: Job) => {
   console.log(`syncRegistryJobProcessor received job ${job.id},`);
   const { ASSETS, API_CURRENT_USER_ID } = await registerClient.searchAssets({
-    max_rows: 3,
+    max_rows: 50_000,
   });
 
   console.log(

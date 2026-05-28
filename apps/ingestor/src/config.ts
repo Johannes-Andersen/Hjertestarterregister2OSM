@@ -32,8 +32,8 @@ export const logLevel = env.LOG_LEVEL;
 export const timezone = env.TZ;
 
 export const schedulerPatterns = {
-  syncRegistry: "0 0 * * *",
-  updateAssets: "* * * * *",
+  syncRegistry: "0 10 0 * * *", // Every day at 10 minutes past midnight.
+  updateAssets: "*/15 * * * *", // Every 15 minutes.
 } as const;
 
 export const queueRateLimits = {

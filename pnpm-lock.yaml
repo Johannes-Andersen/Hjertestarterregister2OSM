@@ -49,6 +49,37 @@ importers:
         specifier: 25.9.1
         version: 25.9.1
 
+  apps/osm-ingestor:
+    dependencies:
+      bullmq:
+        specifier: 5.76.10
+        version: 5.76.10
+      ioredis:
+        specifier: 5.10.1
+        version: 5.10.1
+      osm-pbf-parser-node:
+        specifier: 1.1.4
+        version: 1.1.4
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
+      sax:
+        specifier: 1.6.0
+        version: 1.6.0
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      '@types/sax':
+        specifier: 1.2.7
+        version: 1.2.7
+
   apps/reconciler:
     dependencies:
       '@repo/hjertestarterregister-sdk':
@@ -1197,6 +1228,9 @@ packages:
   '@types/node@25.9.1':
     resolution: {integrity: sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg==}
 
+  '@types/sax@1.2.7':
+    resolution: {integrity: sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==}
+
   '@types/supercluster@7.1.3':
     resolution: {integrity: sha512-Z0pOY34GDFl3Q6hUFYf3HkTwKEE02e7QgtJppBt+beEAxnyOpJua+voGFvxINBHa06GwLFFym7gRPY2SiKIfIA==}
 
@@ -1611,6 +1645,9 @@ packages:
       typescript:
         optional: true
 
+  ieee754@1.2.1:
+    resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
+
   ioredis@5.10.1:
     resolution: {integrity: sha512-HuEDBTI70aYdx1v6U97SbNx9F1+svQKBDo30o0b9fw055LMepzpOOd0Ccg9Q6tbqmBSJaMuY0fB7yw9/vjBYCA==}
     engines: {node: '>=12.22.0'}
@@ -1921,6 +1958,9 @@ packages:
     resolution: {integrity: sha512-H2E+1lXtlk8MDyiuaS+llGKA7KTCGQ53iUgLu5Kn2bvRhxT7WBAbBgNOQs4ESQi9tVpPkUupkGqD7B3ZFLGDpg==}
     engines: {node: '>=18'}
 
+  osm-pbf-parser-node@1.1.4:
+    resolution: {integrity: sha512-8+m6G1WAM1MM0lcHmhC4bZFe1XXa+BMnzME5iYJk+aexcn4gShyZPz6kaNtDOVxvu3jd9wFOmZHO3TAhjokDUQ==}
+
   p-limit@7.3.0:
     resolution: {integrity: sha512-7cIXg/Z0M5WZRblrsOla88S4wAK+zOQQWeBYfV3qJuJXMr+LnbYjaadrFaS0JILfEDPVqHyKnZ1Z/1d6J9VVUw==}
     engines: {node: '>=20'}
@@ -1950,6 +1990,10 @@ packages:
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
+
+  pbf@3.3.0:
+    resolution: {integrity: sha512-XDF38WCH3z5OV/OVa8GKUNtLAyneuzbCisx7QUCF8Q6Nutx0WnJrQe5O+kOtBlLfRNUws98Y58Lblp+NJG5T4Q==}
+    hasBin: true
 
   pbf@4.0.1:
     resolution: {integrity: sha512-SuLdBvS42z33m8ejRbInMapQe8n0D3vN/Xd5fmWM3tufNgRQFBpaW2YVJxQZV4iPNqb0vEFvssMEo5w9c6BTIA==}
@@ -3370,6 +3414,10 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
+  '@types/sax@1.2.7':
+    dependencies:
+      '@types/node': 25.9.1
+
   '@types/supercluster@7.1.3':
     dependencies:
       '@types/geojson': 7946.0.16
@@ -3947,6 +3995,8 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
+  ieee754@1.2.1: {}
+
   ioredis@5.10.1:
     dependencies:
       '@ioredis/commands': 1.5.1
@@ -4455,6 +4505,10 @@ snapshots:
       '@types/geojson': 7946.0.16
       fast-xml-parser: 4.5.6
 
+  osm-pbf-parser-node@1.1.4:
+    dependencies:
+      pbf: 3.3.0
+
   p-limit@7.3.0:
     dependencies:
       yocto-queue: 1.2.2
@@ -4486,6 +4540,11 @@ snapshots:
   path-to-regexp@6.3.0: {}
 
   pathe@2.0.3: {}
+
+  pbf@3.3.0:
+    dependencies:
+      ieee754: 1.2.1
+      resolve-protobuf-schema: 2.1.0
 
   pbf@4.0.1:
     dependencies:
