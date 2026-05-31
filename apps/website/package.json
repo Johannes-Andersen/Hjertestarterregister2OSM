@@ -11,9 +11,9 @@
     "gen-types": "wrangler types"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "13.5.5",
+    "@astrojs/cloudflare": "13.6.0",
     "@repo/sync-store": "workspace:*",
-    "astro": "6.3.8",
+    "astro": "6.4.0",
     "maplibre-gl": "5.24.0",
     "opening_hours": "3.12.0"
   },
