@@ -83,8 +83,8 @@ importers:
   packages/hjertestarterregister-sdk:
     dependencies:
       undici:
-        specifier: 8.3.0
-        version: 8.3.0
+        specifier: 8.4.0
+        version: 8.4.0
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -115,8 +115,8 @@ importers:
   packages/overpass-sdk:
     dependencies:
       undici:
-        specifier: 8.3.0
-        version: 8.3.0
+        specifier: 8.4.0
+        version: 8.4.0
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -2180,8 +2180,8 @@ packages:
     resolution: {integrity: sha512-6KQ/+QxK49Z/p3HO6E5ZCZWNnCasyZLa5ExaVYyvPxUwKtbCPMKELJOqh7EqOle0t9cH/7d2TaaTRRa6Nhs4YQ==}
     engines: {node: '>=20.18.1'}
 
-  undici@8.3.0:
-    resolution: {integrity: sha512-TkUDgb6tl7KOGZ+7e8E3d2FYgUQgF6z5YypqjWmixVQSQERFcVrVg0ySADm2LVLRh5ljAaHTCR5Fmz3Q34rB7Q==}
+  undici@8.4.0:
+    resolution: {integrity: sha512-tDR4LgFBeV7YBWOFMlmbhtrnFVWuZ6HKbkG+88/csQdhK2tPlW78PnLI2VRjIQtTlslvgSZ4R43WBE+4g6rhng==}
     engines: {node: '>=22.19.0'}
 
   unenv@2.0.0-rc.24:
@@ -4741,7 +4741,7 @@ snapshots:
 
   undici@7.24.8: {}
 
-  undici@8.3.0: {}
+  undici@8.4.0: {}
 
   unenv@2.0.0-rc.24:
     dependencies:
