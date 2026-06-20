@@ -6,3 +6,6 @@ allowBuilds:
   sharp: true
   workerd: true
 minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # Renovate security update: undici@8.5.0
+  - undici@8.5.0
