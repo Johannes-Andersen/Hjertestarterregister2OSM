@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hjertestarterregister2osm",
   "main": "@astrojs/cloudflare/entrypoints/server",
-  "compatibility_date": "2026-01-07",
+  "compatibility_date": "2026-06-29",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "placement": {
     "mode": "off"
