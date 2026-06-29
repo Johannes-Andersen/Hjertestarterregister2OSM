@@ -35,7 +35,7 @@ export const prerender = false;
       <span id="map-status">Loading map data...</span>
     </Fragment>
 
-    <div id="aed-map" aria-label="Map of synced AEDs in OSM"></div>
+    <div id="aed-map"></div>
 
     <p id="map-meta" class="map-meta">
       This layer displays objects tagged with
@@ -355,16 +355,13 @@ const applyMapData = (payload: ApiResponse) => {
   for (const layerId of CLUSTER_IDS) {
     map.on("click", layerId, async (e) => {
       const feat = e.features?.[0];
-      if (!feat || feat.geometry.type !== "Point") return;
+      if (feat?.geometry.type !== "Point") return;
 
       const clusterId = feat.properties?.cluster_id as number | undefined;
       const source = map.getSource(SRC) as GeoJSONSource | undefined;
       if (clusterId == null || !source) return;
 
-      const [lng, lat] = (feat.geometry as GeoJSON.Point).coordinates as [
-        number,
-        number,
-      ];
+      const [lng, lat] = feat.geometry.coordinates as [number, number];
       try {
         const zoom = await source.getClusterExpansionZoom(clusterId);
         map.easeTo({ center: [lng, lat], zoom: zoom ?? 12, duration: 300 });
@@ -379,12 +376,9 @@ const applyMapData = (payload: ApiResponse) => {
 
   map.on("click", LAYERS.points, (e) => {
     const feat = e.features?.[0];
-    if (!feat || feat.geometry.type !== "Point") return;
+    if (feat?.geometry.type !== "Point") return;
 
-    const coords = (feat.geometry as GeoJSON.Point).coordinates as [
-      number,
-      number,
-    ];
+    const coords = feat.geometry.coordinates as [number, number];
     new maplibregl.Popup({ closeButton: true, closeOnClick: true })
       .setLngLat(coords)
       .setHTML(renderPopup(feat as unknown as AedFeature))
@@ -417,7 +411,9 @@ const applyMapData = (payload: ApiResponse) => {
     const source = map.getSource(SRC) as GeoJSONSource | undefined;
     if (!source) return;
     const refreshed = decorateOpeningStates(payload.featureCollection);
-    source.setData(refreshed as unknown as GeoJSON.GeoJSON);
+    source.setData(
+      refreshed as unknown as maplibregl.GeoJSONSourceSpecification["data"],
+    );
     updateStatus(countClosed(refreshed));
   }, REFRESH_MS);
 };

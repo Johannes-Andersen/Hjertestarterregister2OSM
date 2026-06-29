@@ -13,21 +13,22 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "nursery": {
-        "noUndeclaredEnvVars": "error"
-      },
+      "preset": "recommended",
+      "nursery": {},
       "complexity": {
         "noUselessFragments": "off"
+      },
+      "suspicious": {
+        "noUndeclaredEnvVars": "error"
       }
     }
   },
   "assist": {
     "enabled": true,
     "actions": {
-      "recommended": true,
+      "preset": "recommended",
       "source": {
-        "recommended": true,
+        "preset": "recommended",
         "useSortedProperties": "on",
         "noDuplicateClasses": "on",
         "organizeImports": "on"
