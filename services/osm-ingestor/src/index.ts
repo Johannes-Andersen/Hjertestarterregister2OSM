@@ -1,25 +1,31 @@
-import { closeDatabase } from "./clients/postgresClient.ts";
-import { migrateDatabase } from "./db/migrate.ts";
-import { runService } from "./service.ts";
-import { logger } from "./utils/logger.ts";
-import { installShutdownHandlers } from "./utils/shutdown.ts";
+import { closeDatabase, migrateDatabase } from "./db/index.ts";
+import { logger } from "./logger.ts";
+import { runIngestor } from "./sync.ts";
 
 const log = logger.child({ module: "bootstrap" });
 const controller = new AbortController();
 
-installShutdownHandlers({ controller, log });
+const shutdown = (signal: NodeJS.Signals): void => {
+  if (controller.signal.aborted) return;
+  log.info({ signal }, "Received shutdown signal");
+  controller.abort(new Error(`Service stopped by ${signal}`));
+};
 
-const main = async () => {
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);
+
+const main = async (): Promise<void> => {
   log.info(
-    { nodeVersion: process.version, pid: process.pid },
+    { pid: process.pid, node: process.version },
     "Starting OSM ingestor",
   );
   await migrateDatabase();
-  await runService({ log, signal: controller.signal });
+  await runIngestor(controller.signal, log);
 };
 
 main()
   .catch((error) => {
+    if (controller.signal.aborted) return;
     log.fatal({ err: error }, "OSM ingestor stopped unexpectedly");
     process.exitCode = 1;
   })

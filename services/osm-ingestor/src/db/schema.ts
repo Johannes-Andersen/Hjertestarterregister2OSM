@@ -1,13 +1,40 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
-export const osmReplicationState = pgTable(
-  "osm_replication_state",
+/**
+ * Singleton (`id = 1`) row tracking both the last imported planet build and the
+ * minute replication cursor. One row is enough because the service follows a
+ * single planet source and replication stream.
+ */
+export const osmSyncState = pgTable(
+  "osm_sync_state",
   {
-    source: text("source").primaryKey(),
-    sequenceNumber: bigint("sequence_number", { mode: "number" }).notNull(),
-    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-    baseUrl: text("base_url").notNull(),
+    id: smallint("id").primaryKey().default(1),
+
+    // Minute replication cursor.
+    replicationSequence: bigint("replication_sequence", { mode: "number" }),
+    replicationTimestamp: timestamp("replication_timestamp", {
+      withTimezone: true,
+    }),
+    replicationBaseUrl: text("replication_base_url"),
+
+    // Last imported planet build.
+    planetSourceUrl: text("planet_source_url"),
+    planetFilePath: text("planet_file_path"),
+    planetEtag: text("planet_etag"),
+    planetLastModified: timestamp("planet_last_modified", {
+      withTimezone: true,
+    }),
+    planetContentLength: bigint("planet_content_length", { mode: "number" }),
+    planetImportedAt: timestamp("planet_imported_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -16,26 +43,12 @@ export const osmReplicationState = pgTable(
       .defaultNow(),
   },
   (table) => [
+    check("osm_sync_state_singleton_check", sql`${table.id} = 1`),
     check(
-      "osm_replication_state_sequence_number_check",
-      sql`${table.sequenceNumber} >= 0`,
+      "osm_sync_state_replication_sequence_check",
+      sql`${table.replicationSequence} IS NULL OR ${table.replicationSequence} >= 0`,
     ),
   ],
 );
 
-export const osmPlanetImportState = pgTable("osm_planet_import_state", {
-  sourceUrl: text("source_url").primaryKey(),
-  filePath: text("file_path").notNull(),
-  remoteEtag: text("remote_etag"),
-  remoteLastModified: timestamp("remote_last_modified", {
-    withTimezone: true,
-  }),
-  remoteContentLength: bigint("remote_content_length", { mode: "number" }),
-  importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export type OsmSyncStateRow = typeof osmSyncState.$inferSelect;

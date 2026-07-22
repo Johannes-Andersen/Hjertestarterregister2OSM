@@ -14,9 +14,9 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+import type { OsmTags } from "../../osm/types.ts";
 
-export type OsmTags = Record<string, string>;
-
+/** Latest known state of every AED-tagged OSM node (soft-deleted, never removed). */
 export const osmAed = pgTable(
   "osm_aed",
   {
@@ -30,7 +30,7 @@ export const osmAed = pgTable(
     userName: text("user_name"),
     osmTimestamp: timestamp("osm_timestamp", { withTimezone: true }),
     tags: jsonb("tags").$type<OsmTags>().notNull(),
-    deletedAt: timestamp("deletedAt", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -53,6 +53,7 @@ export const osmAed = pgTable(
   ],
 );
 
+/** Append-only history of every observed version of an AED-tagged node. */
 export const osmAedHistory = pgTable(
   "osm_aed_history",
   {
@@ -88,20 +89,8 @@ export const osmAedHistory = pgTable(
     check("osm_aed_history_element_id_check", sql`${table.elementId} > 0`),
     check("osm_aed_history_version_check", sql`${table.version} > 0`),
     check(
-      "osm_aed_history_latitude_check",
-      sql`${table.latitude} IS NULL OR ${table.latitude} BETWEEN -90 AND 90`,
-    ),
-    check(
-      "osm_aed_history_longitude_check",
-      sql`${table.longitude} IS NULL OR ${table.longitude} BETWEEN -180 AND 180`,
-    ),
-    check(
       "osm_aed_history_source_check",
       sql`${table.source} IN ('planet', 'minute')`,
-    ),
-    check(
-      "osm_aed_history_replication_sequence_check",
-      sql`${table.replicationSequence} IS NULL OR ${table.replicationSequence} >= 0`,
     ),
     index("osm_aed_history_element_idx").on(
       table.elementType,
@@ -111,3 +100,6 @@ export const osmAedHistory = pgTable(
     index("osm_aed_history_timestamp_idx").on(table.osmTimestamp.desc()),
   ],
 );
+
+export type OsmAedInsert = typeof osmAed.$inferInsert;
+export type OsmAedHistoryInsert = typeof osmAedHistory.$inferInsert;

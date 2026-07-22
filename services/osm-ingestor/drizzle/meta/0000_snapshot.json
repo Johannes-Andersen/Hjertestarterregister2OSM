@@ -1,99 +1,73 @@
 {
-  "id": "c6def1a8-ea3b-4a42-9baa-87b7528617b7",
+  "id": "8cfa008d-3283-4c7a-b997-fadd93366cc4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.osm_planet_import_state": {
-      "name": "osm_planet_import_state",
+    "public.osm_sync_state": {
+      "name": "osm_sync_state",
       "schema": "",
       "columns": {
-        "source_url": {
-          "name": "source_url",
-          "type": "text",
+        "id": {
+          "name": "id",
+          "type": "smallint",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": 1
         },
-        "file_path": {
-          "name": "file_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "remote_etag": {
-          "name": "remote_etag",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remote_last_modified": {
-          "name": "remote_last_modified",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remote_content_length": {
-          "name": "remote_content_length",
+        "replication_sequence": {
+          "name": "replication_sequence",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "imported_at": {
-          "name": "imported_at",
+        "replication_timestamp": {
+          "name": "replication_timestamp",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.osm_replication_state": {
-      "name": "osm_replication_state",
-      "schema": "",
-      "columns": {
-        "source": {
-          "name": "source",
+        "replication_base_url": {
+          "name": "replication_base_url",
           "type": "text",
-          "primaryKey": true,
-          "notNull": true
+          "primaryKey": false,
+          "notNull": false
         },
-        "sequence_number": {
-          "name": "sequence_number",
+        "planet_source_url": {
+          "name": "planet_source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_file_path": {
+          "name": "planet_file_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_etag": {
+          "name": "planet_etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_last_modified": {
+          "name": "planet_last_modified",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_content_length": {
+          "name": "planet_content_length",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "timestamp": {
-          "name": "timestamp",
+        "planet_imported_at": {
+          "name": "planet_imported_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
-        },
-        "base_url": {
-          "name": "base_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -116,9 +90,13 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "osm_replication_state_sequence_number_check": {
-          "name": "osm_replication_state_sequence_number_check",
-          "value": "\"osm_replication_state\".\"sequence_number\" >= 0"
+        "osm_sync_state_singleton_check": {
+          "name": "osm_sync_state_singleton_check",
+          "value": "\"osm_sync_state\".\"id\" = 1"
+        },
+        "osm_sync_state_replication_sequence_check": {
+          "name": "osm_sync_state_replication_sequence_check",
+          "value": "\"osm_sync_state\".\"replication_sequence\" IS NULL OR \"osm_sync_state\".\"replication_sequence\" >= 0"
         }
       },
       "isRLSEnabled": false
@@ -187,8 +165,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "deletedAt": {
-          "name": "deletedAt",
+        "deleted_at": {
+          "name": "deleted_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -213,7 +191,7 @@
           "name": "osm_aed_deleted_at_idx",
           "columns": [
             {
-              "expression": "deletedAt",
+              "expression": "deleted_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -453,21 +431,9 @@
           "name": "osm_aed_history_version_check",
           "value": "\"osm_aed_history\".\"version\" > 0"
         },
-        "osm_aed_history_latitude_check": {
-          "name": "osm_aed_history_latitude_check",
-          "value": "\"osm_aed_history\".\"latitude\" IS NULL OR \"osm_aed_history\".\"latitude\" BETWEEN -90 AND 90"
-        },
-        "osm_aed_history_longitude_check": {
-          "name": "osm_aed_history_longitude_check",
-          "value": "\"osm_aed_history\".\"longitude\" IS NULL OR \"osm_aed_history\".\"longitude\" BETWEEN -180 AND 180"
-        },
         "osm_aed_history_source_check": {
           "name": "osm_aed_history_source_check",
           "value": "\"osm_aed_history\".\"source\" IN ('planet', 'minute')"
-        },
-        "osm_aed_history_replication_sequence_check": {
-          "name": "osm_aed_history_replication_sequence_check",
-          "value": "\"osm_aed_history\".\"replication_sequence\" IS NULL OR \"osm_aed_history\".\"replication_sequence\" >= 0"
         }
       },
       "isRLSEnabled": false

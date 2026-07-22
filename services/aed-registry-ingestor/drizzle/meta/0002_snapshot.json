@@ -175,9 +175,7 @@
         "aed_asset_guid_unique": {
           "name": "aed_asset_guid_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "asset_guid"
-          ]
+          "columns": ["asset_guid"]
         }
       },
       "policies": {},
