@@ -20,5 +20,7 @@ COPY services/aed-registry-ingestor services/aed-registry-ingestor
 RUN chown -R node:node /app
 
 USER node
+WORKDIR /app/services/aed-registry-ingestor
 
-CMD ["pnpm", "--filter", "aed-registry-ingestor", "start"]
+# Run node as PID 1 so SIGTERM/SIGINT reach the app for graceful shutdown.
+CMD ["node", "src/index.ts"]

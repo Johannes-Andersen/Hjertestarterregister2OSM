@@ -19,7 +19,9 @@ COPY services/osm-ingestor services/osm-ingestor
 RUN mkdir -p /data && chown -R node:node /app /data
 
 USER node
+WORKDIR /app/services/osm-ingestor
 
 VOLUME ["/data"]
 
-CMD ["pnpm", "--filter", "osm-ingestor", "start"]
+# Run node as PID 1 so SIGTERM/SIGINT reach the app for graceful shutdown.
+CMD ["node", "src/index.ts"]
