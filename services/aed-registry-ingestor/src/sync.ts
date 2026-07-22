@@ -25,6 +25,23 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const UPSERT_CHUNK_SIZE = 1_000;
 
+/** Thrown to abort (and roll back) a full sync that would delete too many AEDs. */
+export class MassDeletionError extends Error {
+  readonly attempted: number;
+  readonly limit: number;
+
+  constructor(attempted: number, limit: number) {
+    super(
+      `Full sync would soft-delete ${attempted} AEDs (limit ${limit}); ` +
+        "aborting to avoid mass deletion. Investigate the registry snapshot, " +
+        "then raise MAX_DELETIONS_PER_SYNC to override if the drop is legitimate.",
+    );
+    this.name = "MassDeletionError";
+    this.attempted = attempted;
+    this.limit = limit;
+  }
+}
+
 const columns = getTableColumns(aed);
 
 // Columns that carry registry data. A row is only rewritten (and an event
@@ -176,6 +193,14 @@ export const runFullSync = async (log: Logger): Promise<void> => {
         foundAssetIds,
         "full-sync",
       );
+      // Circuit breaker: a bad snapshot could soft-delete (and stream deletion
+      // events for) huge numbers of AEDs. Roll the whole sync back instead.
+      if (removed.deleted >= env.MAX_DELETIONS_PER_SYNC) {
+        throw new MassDeletionError(
+          removed.deleted,
+          env.MAX_DELETIONS_PER_SYNC,
+        );
+      }
       await saveSyncState(tx, {
         lastFullSyncAt: startedAt,
         lastIncrementalSyncAt: startedAt,

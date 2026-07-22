@@ -1,7 +1,12 @@
 import {
   configure as configureOsmApi,
   getFeature,
+  getFeatureHistory,
+  getRelationsForElement,
+  getWaysForNode,
   type OsmNode,
+  type OsmRelation,
+  type OsmWay,
   type Tags,
   uploadChangeset,
 } from "osm-api";
@@ -58,17 +63,79 @@ export class OsmApiClient {
       const [feature] = await getFeature("node", nodeId);
 
       if (!feature) {
-        throw new OsmSdkError(`OSM node ${nodeId} not found`, { nodeId });
+        throw new OsmSdkError(`OSM node ${nodeId} not found`, {
+          nodeId,
+          status: 404,
+        });
       }
 
       return feature;
     } catch (error) {
       if (error instanceof OsmSdkError) throw error;
 
+      const status =
+        typeof (error as { cause?: unknown }).cause === "number"
+          ? (error as { cause: number }).cause
+          : undefined;
+
       throw new OsmSdkError(
         error instanceof Error
           ? error.message
           : `Failed to fetch OSM node ${nodeId}.`,
+        { nodeId, status, cause: error },
+      );
+    }
+  }
+
+  /** Returns every version of a node, oldest first (including deleted versions). */
+  async getNodeHistory(nodeId: number): Promise<OsmNode[]> {
+    this.applyLibraryConfiguration();
+
+    try {
+      return await getFeatureHistory("node", nodeId);
+    } catch (error) {
+      if (error instanceof OsmSdkError) throw error;
+
+      throw new OsmSdkError(
+        error instanceof Error
+          ? error.message
+          : `Failed to fetch history for OSM node ${nodeId}.`,
+        { nodeId, cause: error },
+      );
+    }
+  }
+
+  /** Ways that include this node (a non-empty result means it shapes geometry). */
+  async getWaysForNode(nodeId: number): Promise<OsmWay[]> {
+    this.applyLibraryConfiguration();
+
+    try {
+      return await getWaysForNode(nodeId);
+    } catch (error) {
+      if (error instanceof OsmSdkError) throw error;
+
+      throw new OsmSdkError(
+        error instanceof Error
+          ? error.message
+          : `Failed to fetch ways for OSM node ${nodeId}.`,
+        { nodeId, cause: error },
+      );
+    }
+  }
+
+  /** Relations that include this node as a member. */
+  async getRelationsForNode(nodeId: number): Promise<OsmRelation[]> {
+    this.applyLibraryConfiguration();
+
+    try {
+      return await getRelationsForElement("node", nodeId);
+    } catch (error) {
+      if (error instanceof OsmSdkError) throw error;
+
+      throw new OsmSdkError(
+        error instanceof Error
+          ? error.message
+          : `Failed to fetch relations for OSM node ${nodeId}.`,
         { nodeId, cause: error },
       );
     }

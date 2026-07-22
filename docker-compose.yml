@@ -71,6 +71,30 @@ services:
     volumes:
       - osm-planet:/data
 
+  aed-reconciler:
+    build:
+      context: .
+      dockerfile: services/aed-reconciler/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Ordered after osm-ingestor so the osm_aed table exists.
+      osm-ingestor:
+        condition: service_started
+    environment:
+      # Reads the osm_aed table from the osm-ingestor database.
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/osm_ingestor
+      REDIS_URL: redis://redis:6379
+      # Dry-run by default: nothing is uploaded to OSM. Set DRY=false to go live.
+      DRY: ${DRY:-true}
+      OSM_API_URL: ${OSM_API_URL:-https://api.openstreetmap.org}
+      OSM_AUTH_TOKEN: ${OSM_AUTH_TOKEN:-}
+      OSM_SERVICE_USERNAME: ${OSM_SERVICE_USERNAME:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
 volumes:
   postgres-data:
   redis-data:

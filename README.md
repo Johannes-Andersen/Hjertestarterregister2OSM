@@ -5,13 +5,14 @@ and [OpenStreetMap](https://www.openstreetmap.org/). It keeps local, queryable
 copies of both datasets in PostgreSQL as the foundation for reconciling AED
 (defibrillator) locations between them.
 
-The repo is a `pnpm` workspace + Turborepo monorepo with two long-running
+The repo is a `pnpm` workspace + Turborepo monorepo with three long-running
 services and three shared packages.
 
 | Path                                 | Type    | Description                                                        |
 | ------------------------------------ | ------- | ------------------------------------------------------------------ |
 | `services/aed-registry-ingestor`     | service | Imports the AED registry into Postgres and publishes change events |
 | `services/osm-ingestor`              | service | Ingests OSM AED nodes (planet + minute replication) into Postgres  |
+| `services/aed-reconciler`            | service | Consumes registry events and reconciles AED edits into OSM         |
 | `packages/hjertestarterregister-sdk` | package | Typed client for the Hjertestarterregister API                     |
 | `packages/osm-sdk`                   | package | Typed client for the OpenStreetMap API                             |
 | `packages/typescript-config`         | package | Shared TypeScript configuration                                    |
@@ -38,9 +39,10 @@ docker compose up --build
 ```
 
 Compose provisions a `postgres` instance with the `aed_registry_ingestor` and
-`osm_ingestor` databases, a `redis` instance, and both services. Each service
-runs its Drizzle migrations on startup. State persists in named volumes
-(`postgres-data`, `redis-data`, `osm-planet`). Tear down with
+`osm_ingestor` databases, a `redis` instance, and all three services. Each
+ingestor runs its Drizzle migrations on startup, and `aed-reconciler` starts in
+dry-run mode (no OSM writes) unless you set `DRY=false`. State persists in named
+volumes (`postgres-data`, `redis-data`, `osm-planet`). Tear down with
 `docker compose down` (add `-v` to also delete the volumes).
 
 ## Local development
@@ -65,7 +67,10 @@ change event for every difference it detects.
 
 - **Full sync** on a daily cron (`FULL_SYNC_CRON`, default `03:00` Europe/Oslo):
   fetches the whole registry, upserts it, and soft-deletes rows that are no
-  longer present in the snapshot.
+  longer present in the snapshot. As a circuit breaker, a full sync that would
+  soft-delete `MAX_DELETIONS_PER_SYNC` AEDs or more (default 50) is aborted and
+  rolled back — no rows are deleted and no events are emitted — so a bad snapshot
+  cannot stream mass deletions downstream.
 - **Incremental sync** every 15 minutes (`INCREMENTAL_SYNC_INTERVAL_MS`): fetches
   only changes since the stored cursor. Deletions are handled by the full sync.
 - Stores the latest snapshot in the `aed` table; the cursor lives in
@@ -86,6 +91,7 @@ Requires Postgres, Redis, and registry credentials. Env vars (see
 | `HJERTESTARTERREGISTER_CLIENT_SECRET`   | yes      | —                        |
 | `REDIS_URL`                             | no       | `redis://127.0.0.1:6379` |
 | `REGISTRY_MAX_ROWS`                     | no       | `50000`                  |
+| `MAX_DELETIONS_PER_SYNC`                | no       | `50`                     |
 | `INCREMENTAL_SYNC_INTERVAL_MS`          | no       | `900000`                 |
 | `FULL_SYNC_CRON`                        | no       | `0 3 * * *`              |
 | `FULL_SYNC_TIMEZONE`                    | no       | `Europe/Oslo`            |
@@ -155,10 +161,78 @@ docker run --rm \
   osm-ingestor
 ```
 
+### aed-reconciler
+
+Long-running BullMQ worker that consumes the `aed-registry-events` queue and
+turns registry changes into OpenStreetMap edits. It reads the osm-ingestor's
+`osm_aed` table to locate candidate nodes and the OSM API (via `@repo/osm-sdk`)
+for authoritative node state and history.
+
+**Dry-run by default** (`DRY=true`): plans are computed and logged but nothing is
+uploaded to OSM. Set `DRY=false` (and provide `OSM_AUTH_TOKEN`) to go live.
+
+**Preview artifacts**: set `PREVIEW_DIR` to write one `.osc` and one `.geojson`
+file per changeset into that folder (filenames are timestamp-prefixed, so runs
+accumulate a reviewable history over time). Works in both dry and live mode. The
+`.osc` opens in JOSM and the `.geojson` in tools like geojson.io, making the
+planned edits easy to review before/after an import.
+
+Per-event decisions:
+
+- **Deleted** — delete the OSM node(s) matching `ref:hjertestarterregister`.
+- **Created / updated** — if a node already carries the ref, update its managed
+  tags (`emergency`, `emergency:phone`, `ref:hjertestarterregister`,
+  `opening_hours`, `level`); if several nodes share the ref, keep the one closest
+  to the registry location and remove the rest. If no node carries the ref, merge
+  into the nearest unmanaged community AED within `MERGE_DISTANCE_METERS` (175 m),
+  otherwise create a new node. Mobile AEDs are ignored.
+
+Safeguards:
+
+- Edits nodes only — never ways, relations, or areas.
+- Never touches a node tagged `note` or `fixme`.
+- Deletes a node only when it is AED-only and not part of any way or relation;
+  otherwise it strips just the AED tags so host features and geometry survive.
+- The `ref:hjertestarterregister` value is the registry `ASSET_GUID`, matching
+  the manual first import; tag values over 255 characters are dropped.
+- Moves a node only when the registry location differs by more than
+  `MOVE_DISTANCE_METERS` (15 m) **and** the current location was last set by this
+  service's own OSM account (`OSM_SERVICE_USERNAME`) — community placements are
+  preserved.
+
+Requires Redis, read access to the osm-ingestor database, and (in live mode) an
+OSM OAuth token. Env vars (see [`.env.example`](services/aed-reconciler/.env.example)):
+
+| Variable                | Required         | Default                         |
+| ----------------------- | ---------------- | ------------------------------- |
+| `DATABASE_URL`          | yes              | — (osm-ingestor database)       |
+| `REDIS_URL`             | no               | `redis://127.0.0.1:6379`        |
+| `QUEUE_NAME`            | no               | `aed-registry-events`           |
+| `DRY`                   | no               | `true`                          |
+| `OSM_API_URL`           | no               | `https://api.openstreetmap.org` |
+| `OSM_AUTH_TOKEN`        | when `DRY=false` | —                               |
+| `OSM_SERVICE_USERNAME`  | for node moves   | —                               |
+| `MERGE_DISTANCE_METERS` | no               | `175`                           |
+| `MOVE_DISTANCE_METERS`  | no               | `15`                            |
+| `PREVIEW_DIR`           | no               | — (disabled)                    |
+| `LOG_LEVEL`             | no               | `info`                          |
+
+Standalone container:
+
+```bash
+docker build -f services/aed-reconciler/Dockerfile -t aed-reconciler .
+docker run --rm \
+  --add-host=host.docker.internal:host-gateway \
+  -e DATABASE_URL='postgres://user:pass@host.docker.internal:5432/osm_ingestor' \
+  -e REDIS_URL='redis://host.docker.internal:6379' \
+  aed-reconciler
+```
+
 ### Database migrations
 
-Both services embed their Drizzle migrations and apply them automatically at
-startup. During development:
+Both ingestor services embed their Drizzle migrations and apply them
+automatically at startup. `aed-reconciler` owns no tables (it only reads the
+osm-ingestor's `osm_aed` table). During development:
 
 ```bash
 pnpm --filter <service> db:generate   # generate a migration from schema changes
@@ -178,8 +252,8 @@ messaging). Built on `undici` + `zod`. Consumed by `aed-registry-ingestor`.
 ### @repo/osm-sdk
 
 Typed OpenStreetMap API client for reading and writing map data, including
-batched changeset application. Built on `osm-api` + `zod`. Standalone, intended
-for writing reconciled changes back to OSM.
+node history and batched changeset application. Built on `osm-api` + `zod`.
+Consumed by `aed-reconciler`; kept generic for other OSM editing.
 
 ### @repo/typescript-config
 

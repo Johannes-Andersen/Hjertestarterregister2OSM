@@ -32,3 +32,6 @@ npm-debug.log*
 
 # Cloudflare 
 .wrangler
+
+# Edit preview directory
+services/aed-reconciler/preview

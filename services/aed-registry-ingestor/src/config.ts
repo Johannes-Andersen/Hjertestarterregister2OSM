@@ -21,6 +21,11 @@ const envSchema = z.object({
   // we cannot trust deletion reconciliation and refuse to advance.
   REGISTRY_MAX_ROWS: z.coerce.number().int().positive().default(50_000),
 
+  // Circuit breaker: abort a full sync (rolling it back and emitting no events)
+  // when it would soft-delete at least this many AEDs. Guards against a bad
+  // registry snapshot streaming thousands of deletions downstream.
+  MAX_DELETIONS_PER_SYNC: z.coerce.number().int().positive().default(50),
+
   // How often to poll for incremental changes.
   INCREMENTAL_SYNC_INTERVAL_MS: z.coerce
     .number()
