@@ -12,7 +12,17 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
-import type { OpeningHours } from "../utils/transformAed.ts";
+
+/** Per-weekday opening interval in minutes since midnight (0–1440). */
+export interface OpeningInterval {
+  from: number;
+  to: number;
+}
+
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+/** `null` means the registry did not provide hours for that day. */
+export type OpeningHours = Record<Weekday, OpeningInterval | null>;
 
 export const aed = pgTable(
   "aed",
@@ -23,7 +33,7 @@ export const aed = pgTable(
     siteAddress: text("site_address").notNull(),
     siteLatitude: doublePrecision("site_latitude").notNull(),
     siteLongitude: doublePrecision("site_longitude").notNull(),
-    siteFloorNumber: doublePrecision("site_floor_number"),
+    siteFloorNumber: integer("site_floor_number"),
     sitePostCode: text("site_post_code"),
     sitePostArea: text("site_post_area"),
     siteDescription: text("site_description"),
@@ -83,3 +93,6 @@ export const aedRegistrySyncState = pgTable(
     ),
   ],
 );
+
+export type AedInsert = typeof aed.$inferInsert;
+export type AedRow = typeof aed.$inferSelect;

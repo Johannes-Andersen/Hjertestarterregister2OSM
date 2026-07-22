@@ -1,0 +1,263 @@
+{
+  "id": "8244b32a-11b4-4ec3-97cb-881d03735d38",
+  "prevId": "bc5406b5-071f-4434-b15c-bd7333776b63",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.aed": {
+      "name": "aed",
+      "schema": "",
+      "columns": {
+        "asset_id": {
+          "name": "asset_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "asset_guid": {
+          "name": "asset_guid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_name": {
+          "name": "site_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_address": {
+          "name": "site_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_latitude": {
+          "name": "site_latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_longitude": {
+          "name": "site_longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_floor_number": {
+          "name": "site_floor_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_post_code": {
+          "name": "site_post_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_post_area": {
+          "name": "site_post_area",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_description": {
+          "name": "site_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_mobile": {
+          "name": "is_mobile",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_date": {
+          "name": "created_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "modified_date": {
+          "name": "modified_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active_from_date": {
+          "name": "active_from_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active_to_date": {
+          "name": "active_to_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opening_hours_limited": {
+          "name": "opening_hours_limited",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opening_hours_closed_holidays": {
+          "name": "opening_hours_closed_holidays",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opening_hours": {
+          "name": "opening_hours",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "aed_deleted_at_idx": {
+          "name": "aed_deleted_at_idx",
+          "columns": [
+            {
+              "expression": "deletedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "aed_modified_date_idx": {
+          "name": "aed_modified_date_idx",
+          "columns": [
+            {
+              "expression": "modified_date",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "aed_asset_guid_unique": {
+          "name": "aed_asset_guid_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "asset_guid"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "aed_asset_id_check": {
+          "name": "aed_asset_id_check",
+          "value": "\"aed\".\"asset_id\" > 0"
+        },
+        "aed_site_latitude_check": {
+          "name": "aed_site_latitude_check",
+          "value": "\"aed\".\"site_latitude\" BETWEEN -90 AND 90"
+        },
+        "aed_site_longitude_check": {
+          "name": "aed_site_longitude_check",
+          "value": "\"aed\".\"site_longitude\" BETWEEN -180 AND 180"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.aed_registry_sync_state": {
+      "name": "aed_registry_sync_state",
+      "schema": "",
+      "columns": {
+        "singleton_id": {
+          "name": "singleton_id",
+          "type": "smallint",
+          "primaryKey": true,
+          "notNull": true,
+          "default": 1
+        },
+        "last_full_sync_at": {
+          "name": "last_full_sync_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_incremental_sync_at": {
+          "name": "last_incremental_sync_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "aed_registry_sync_state_singleton_check": {
+          "name": "aed_registry_sync_state_singleton_check",
+          "value": "\"aed_registry_sync_state\".\"singleton_id\" = 1"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,49 +1,48 @@
-import { closeDatabase } from "./clients/postgresClient.ts";
-import { redisConnection } from "./clients/redisClient.ts";
-import { migrateDatabase } from "./db/migrate.ts";
-import { aedEventQueue, setupAedEventQueue } from "./queues/aedEventQueue.ts";
-import { registrySyncScheduler } from "./schedulers/registrySyncScheduler.ts";
-import { logger } from "./utils/logger.ts";
-import { installShutdownHandlers } from "./utils/shutdown.ts";
+import { closeDatabase, migrateDatabase } from "./db/index.ts";
+import { closeEventsQueue } from "./events.ts";
+import { logger } from "./logger.ts";
+import { redis } from "./redis.ts";
+import { startScheduler, stopScheduler } from "./scheduler.ts";
 
 const log = logger.child({ module: "bootstrap" });
 
-const setup = async () => {
+const main = async (): Promise<void> => {
   log.info(
-    { nodeVersion: process.version, pid: process.pid },
+    { pid: process.pid, node: process.version },
     "Starting AED registry ingestor",
   );
-
   await migrateDatabase();
-  await setupAedEventQueue();
-
-  installShutdownHandlers({
-    stopScheduling: () => registrySyncScheduler.stop(),
-    eventQueue: aedEventQueue,
-    closeRedis: async () => {
-      await redisConnection.quit();
-    },
-    closePostgres: async () => {
-      await closeDatabase();
-    },
-    log,
-  });
-
-  await registrySyncScheduler.start();
-
+  await startScheduler();
   log.info("AED registry ingestor ready");
 };
 
-process.on("uncaughtException", (error) => {
-  log.fatal({ err: error }, "Uncaught exception");
+let shuttingDown = false;
+const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info({ signal }, "Starting graceful shutdown");
+
+  await stopScheduler();
+  await closeEventsQueue();
+  await redis.quit();
+  await closeDatabase();
+
+  log.info("Graceful shutdown complete");
+  process.exit(0);
+};
+
+process.on("SIGTERM", (signal) => void shutdown(signal));
+process.on("SIGINT", (signal) => void shutdown(signal));
+process.on("uncaughtException", (err) => {
+  log.fatal({ err }, "Uncaught exception");
   process.exit(1);
 });
-process.on("unhandledRejection", (reason) => {
-  log.fatal({ err: reason }, "Unhandled promise rejection");
+process.on("unhandledRejection", (err) => {
+  log.fatal({ err }, "Unhandled promise rejection");
   process.exit(1);
 });
 
-setup().catch((error) => {
-  log.fatal({ err: error }, "Failed to start AED registry ingestor");
+main().catch((err) => {
+  log.fatal({ err }, "Failed to start AED registry ingestor");
   process.exit(1);
 });
