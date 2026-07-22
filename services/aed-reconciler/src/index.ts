@@ -22,7 +22,14 @@ const worker = new Worker(
     );
   },
   // Serialize reconciliation so OSM edits never race each other.
-  { connection: redis, concurrency: 1 },
+  {
+    connection: redis,
+    concurrency: 1,
+    limiter: {
+      max: env.WORKER_RATE_LIMIT_MAX,
+      duration: env.WORKER_RATE_LIMIT_DURATION_MS,
+    },
+  },
 );
 
 worker.on("failed", (job, err) =>
@@ -30,7 +37,15 @@ worker.on("failed", (job, err) =>
 );
 worker.on("ready", () =>
   log.info(
-    { queue: env.QUEUE_NAME, dry: env.DRY, osmApiUrl: env.OSM_API_URL },
+    {
+      queue: env.QUEUE_NAME,
+      dry: env.DRY,
+      osmApiUrl: env.OSM_API_URL,
+      rateLimit: {
+        max: env.WORKER_RATE_LIMIT_MAX,
+        durationMs: env.WORKER_RATE_LIMIT_DURATION_MS,
+      },
+    },
     "AED reconciler ready",
   ),
 );

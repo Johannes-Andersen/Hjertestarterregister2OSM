@@ -1,5 +1,7 @@
 import {
   bigint,
+  bigserial,
+  boolean,
   doublePrecision,
   integer,
   jsonb,
@@ -28,3 +30,15 @@ export const osmAed = pgTable(
   },
   (table) => [primaryKey({ columns: [table.elementType, table.elementId] })],
 );
+
+/** Read-only view of the history table owned by osm-ingestor. */
+export const osmAedHistory = pgTable("osm_aed_history", {
+  historyId: bigserial("history_id", { mode: "number" }).primaryKey(),
+  elementType: text("element_type").notNull(),
+  elementId: bigint("element_id", { mode: "number" }).notNull(),
+  version: integer("version").notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  userName: text("user_name"),
+  isDeleted: boolean("is_deleted").notNull(),
+});

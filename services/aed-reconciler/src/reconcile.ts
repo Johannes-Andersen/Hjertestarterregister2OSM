@@ -9,18 +9,18 @@ import type { Logger } from "pino";
 import { env } from "./config.ts";
 import type { AedEvent, RegistryAed } from "./events.ts";
 import { distanceMeters, type LatLon } from "./geo.ts";
+import { fetchLiveNode, nodeIsInUse, nodeLocation, osm } from "./osm.ts";
 import {
-  fetchLiveNode,
-  locationOwner,
-  nodeIsInUse,
-  nodeLocation,
-  osm,
-} from "./osm.ts";
-import { findByRef, findNearbyUnmanaged } from "./osmAedRepository.ts";
+  findByRef,
+  findLocationOwner,
+  findNearbyUnmanaged,
+  type OsmAedNode,
+} from "./osmAedRepository.ts";
 import { writePreview } from "./preview.ts";
 import {
   applyManagedTags,
   hasNoteOrFixme,
+  hasStrippableAedTags,
   isAedOnlyNode,
   registryAedToTags,
   stripAedTags,
@@ -48,11 +48,41 @@ const toPlanned = (node: OsmNode): PlannedNode => ({
 
 /** Plan a modify (or return null when the node is gone, opted-out, or unchanged). */
 const planEdit = async (
-  nodeId: number,
+  stored: OsmAedNode,
   aed: RegistryAed,
   { allowMove }: { allowMove: boolean },
   log: Logger,
 ): Promise<PlannedModifyChange | null> => {
+  const nodeId = stored.elementId;
+  if (hasNoteOrFixme(stored.tags)) {
+    log.info("Skipping node tagged with note/fixme in local OSM data");
+    return null;
+  }
+
+  const managedTags = registryAedToTags(aed);
+  const storedTagChange = applyManagedTags(stored.tags, managedTags).changed;
+  const storedDistance = distanceMeters(
+    { lat: stored.latitude, lon: stored.longitude },
+    registryLocation(aed),
+  );
+  // Ownership is only worth resolving when a move is actually possible: the
+  // caller allows it, the stored position is far enough away, and we have an
+  // account to attribute the most recent move to.
+  const mayMove =
+    allowMove &&
+    storedDistance > env.MOVE_DISTANCE_METERS &&
+    Boolean(env.OSM_SERVICE_USERNAME);
+  const storedOwner = mayMove ? await findLocationOwner(nodeId) : null;
+  const storedMove = mayMove && storedOwner === env.OSM_SERVICE_USERNAME;
+
+  if (!storedTagChange && !storedMove) {
+    log.debug(
+      { storedVersion: stored.version },
+      "Local OSM data shows node is already up to date",
+    );
+    return null;
+  }
+
   const live = await fetchLiveNode(nodeId);
   if (!live) {
     log.warn("Node not found in OSM; skipping edit");
@@ -63,25 +93,33 @@ const planEdit = async (
     return null;
   }
 
-  const { tags, changed } = applyManagedTags(
-    live.tags ?? {},
-    registryAedToTags(aed),
-  );
+  const { tags, changed } = applyManagedTags(live.tags ?? {}, managedTags);
 
   let { lat, lon } = live;
   let moved = false;
   if (allowMove) {
     const distance = distanceMeters(nodeLocation(live), registryLocation(aed));
     if (distance > env.MOVE_DISTANCE_METERS) {
-      const owner = await locationOwner(nodeId);
-      if (env.OSM_SERVICE_USERNAME && owner === env.OSM_SERVICE_USERNAME) {
+      // Only trust the stored history when the latest-state row is the same
+      // version as the final live check. A newer live version may contain a
+      // community move that minute replication has not stored yet.
+      if (
+        storedMove &&
+        stored.version !== null &&
+        stored.version === live.version
+      ) {
         lat = aed.siteLatitude;
         lon = aed.siteLongitude;
         moved = true;
       } else {
         log.info(
-          { distance: Math.round(distance), owner },
-          "Registry location differs but the node was placed by the community; not moving",
+          {
+            distance: Math.round(distance),
+            storedOwner,
+            storedVersion: stored.version,
+            liveVersion: live.version,
+          },
+          "Registry location differs but ownership cannot be safely attributed to this service; not moving",
         );
       }
     }
@@ -103,9 +141,20 @@ const planEdit = async (
  * stripped so geometry and host features are preserved.
  */
 const planRemoval = async (
-  nodeId: number,
+  stored: OsmAedNode,
   log: Logger,
 ): Promise<{ modify?: PlannedModifyChange; delete?: PlannedDeleteChange }> => {
+  const nodeId = stored.elementId;
+  if (hasNoteOrFixme(stored.tags)) {
+    log.info("Skipping node tagged with note/fixme in local OSM data");
+    return {};
+  }
+  // A mixed node with no strippable AED tags can never produce a change.
+  if (!isAedOnlyNode(stored.tags) && !hasStrippableAedTags(stored.tags)) {
+    log.debug("Local OSM data shows no removable AED tags");
+    return {};
+  }
+
   const live = await fetchLiveNode(nodeId);
   if (!live) {
     log.debug("Node already gone; nothing to remove");
@@ -164,9 +213,23 @@ const planCreate = (aed: RegistryAed): ChangePlan["create"][number] => ({
  * `null` when the host is gone, opted-out, or is actually AED-only in live OSM.
  */
 const planExtractFromHost = async (
-  nodeId: number,
+  stored: OsmAedNode,
   log: Logger,
 ): Promise<PlannedModifyChange | null> => {
+  const nodeId = stored.elementId;
+  if (hasNoteOrFixme(stored.tags)) {
+    log.info("Host node tagged with note/fixme in local OSM data");
+    return null;
+  }
+  if (isAedOnlyNode(stored.tags)) {
+    log.info("Host node is AED-only in local OSM data; not stripping");
+    return null;
+  }
+  if (!hasStrippableAedTags(stored.tags)) {
+    log.debug("Local OSM data shows no AED tags to strip from host");
+    return null;
+  }
+
   const live = await fetchLiveNode(nodeId);
   if (!live) {
     log.debug("Host node gone; nothing to strip");
@@ -219,7 +282,7 @@ const handleUpsert = async (
     // mixed feature or a node used by a way/relation — strip its AED tags).
     for (const duplicate of duplicates) {
       const removal = await planRemoval(
-        duplicate.elementId,
+        duplicate,
         log.child({ duplicateOf: aed.assetGuid, node: duplicate.elementId }),
       );
       if (removal.delete) plan.delete.push(removal.delete);
@@ -228,7 +291,7 @@ const handleUpsert = async (
 
     if (keeper) {
       const modify = await planEdit(
-        keeper.elementId,
+        keeper,
         aed,
         { allowMove: true },
         log.child({ node: keeper.elementId }),
@@ -247,7 +310,7 @@ const handleUpsert = async (
     if (isAedOnlyNode(target.tags)) {
       // Standalone community AED — adopt it in place.
       const modify = await planEdit(
-        target.elementId,
+        target,
         aed,
         { allowMove: false },
         log.child({
@@ -277,7 +340,7 @@ const handleUpsert = async (
       // own node. Strip the AED tags off the host and create a standalone node
       // at the registry coordinates (community consensus — the St1 case).
       const strip = await planExtractFromHost(
-        target.elementId,
+        target,
         log.child({
           extractFrom: target.elementId,
           distance: Math.round(target.distance),
@@ -306,7 +369,7 @@ const handleDelete = async (
   }
   for (const match of matches) {
     const removal = await planRemoval(
-      match.elementId,
+      match,
       log.child({ node: match.elementId }),
     );
     if (removal.delete) plan.delete.push(removal.delete);

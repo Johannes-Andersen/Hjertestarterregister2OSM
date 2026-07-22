@@ -42,28 +42,6 @@ export const fetchLiveNode = async (
   }
 };
 
-/**
- * OSM username that last set the node's current coordinates. Returns `null`
- * when the history is unavailable. Deleted versions are ignored.
- */
-export const locationOwner = async (nodeId: number): Promise<string | null> => {
-  const history = (await osm.getNodeHistory(nodeId)).filter(
-    (version) => version.visible !== false,
-  );
-  if (history.length === 0) return null;
-
-  let owner = history[0]?.user ?? null;
-  for (let i = 1; i < history.length; i++) {
-    const previous = history[i - 1];
-    const current = history[i];
-    if (!previous || !current) continue;
-    if (current.lat !== previous.lat || current.lon !== previous.lon) {
-      owner = current.user;
-    }
-  }
-  return owner;
-};
-
 export const nodeLocation = (node: OsmNode): LatLon => ({
   lat: node.lat,
   lon: node.lon,

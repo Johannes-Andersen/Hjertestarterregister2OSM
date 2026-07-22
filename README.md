@@ -165,8 +165,9 @@ docker run --rm \
 
 Long-running BullMQ worker that consumes the `aed-registry-events` queue and
 turns registry changes into OpenStreetMap edits. It reads the osm-ingestor's
-`osm_aed` table to locate candidate nodes and the OSM API (via `@repo/osm-sdk`)
-for authoritative node state and history.
+`osm_aed` and `osm_aed_history` tables to reject no-ops and determine location
+ownership before contacting OSM. It still fetches the live node as the final
+check before planning an edit.
 
 **Dry-run by default** (`DRY=true`): plans are computed and logged but nothing is
 uploaded to OSM. Set `DRY=false` (and provide `OSM_AUTH_TOKEN`) to go live.
@@ -199,23 +200,27 @@ Safeguards:
   `MOVE_DISTANCE_METERS` (15 m) **and** the current location was last set by this
   service's own OSM account (`OSM_SERVICE_USERNAME`) — community placements are
   preserved.
+- Rate-limits BullMQ job starts to `WORKER_RATE_LIMIT_MAX` per
+  `WORKER_RATE_LIMIT_DURATION_MS` (3 jobs per second by default).
 
 Requires Redis, read access to the osm-ingestor database, and (in live mode) an
 OSM OAuth token. Env vars (see [`.env.example`](services/aed-reconciler/.env.example)):
 
-| Variable                | Required         | Default                         |
-| ----------------------- | ---------------- | ------------------------------- |
-| `DATABASE_URL`          | yes              | — (osm-ingestor database)       |
-| `REDIS_URL`             | no               | `redis://127.0.0.1:6379`        |
-| `QUEUE_NAME`            | no               | `aed-registry-events`           |
-| `DRY`                   | no               | `true`                          |
-| `OSM_API_URL`           | no               | `https://api.openstreetmap.org` |
-| `OSM_AUTH_TOKEN`        | when `DRY=false` | —                               |
-| `OSM_SERVICE_USERNAME`  | for node moves   | —                               |
-| `MERGE_DISTANCE_METERS` | no               | `175`                           |
-| `MOVE_DISTANCE_METERS`  | no               | `15`                            |
-| `PREVIEW_DIR`           | no               | — (disabled)                    |
-| `LOG_LEVEL`             | no               | `info`                          |
+| Variable                        | Required         | Default                         |
+| ------------------------------- | ---------------- | ------------------------------- |
+| `DATABASE_URL`                  | yes              | — (osm-ingestor database)       |
+| `REDIS_URL`                     | no               | `redis://127.0.0.1:6379`        |
+| `QUEUE_NAME`                    | no               | `aed-registry-events`           |
+| `WORKER_RATE_LIMIT_MAX`         | no               | `3`                             |
+| `WORKER_RATE_LIMIT_DURATION_MS` | no               | `1000`                          |
+| `DRY`                           | no               | `true`                          |
+| `OSM_API_URL`                   | no               | `https://api.openstreetmap.org` |
+| `OSM_AUTH_TOKEN`                | when `DRY=false` | —                               |
+| `OSM_SERVICE_USERNAME`          | for node moves   | —                               |
+| `MERGE_DISTANCE_METERS`         | no               | `175`                           |
+| `MOVE_DISTANCE_METERS`          | no               | `15`                            |
+| `PREVIEW_DIR`                   | no               | — (disabled)                    |
+| `LOG_LEVEL`                     | no               | `info`                          |
 
 Standalone container:
 
@@ -232,7 +237,7 @@ docker run --rm \
 
 Both ingestor services embed their Drizzle migrations and apply them
 automatically at startup. `aed-reconciler` owns no tables (it only reads the
-osm-ingestor's `osm_aed` table). During development:
+osm-ingestor's `osm_aed` and `osm_aed_history` tables). During development:
 
 ```bash
 pnpm --filter <service> db:generate   # generate a migration from schema changes

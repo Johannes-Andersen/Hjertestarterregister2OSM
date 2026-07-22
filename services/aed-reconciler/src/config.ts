@@ -15,11 +15,15 @@ const dryRun = z
   .default("true")
   .transform((value) => value.trim().toLowerCase() !== "false");
 
+const positiveInteger = z.coerce.number().int().positive();
+
 const envSchema = z.object({
-  // Points at the osm-ingestor database (the `osm_aed` table).
+  // Points at the osm-ingestor database (`osm_aed` + `osm_aed_history`).
   DATABASE_URL: z.string().trim().min(1),
   REDIS_URL: z.string().trim().min(1).default("redis://127.0.0.1:6379"),
   QUEUE_NAME: z.string().trim().min(1).default("aed-registry-events"),
+  WORKER_RATE_LIMIT_MAX: positiveInteger.default(3),
+  WORKER_RATE_LIMIT_DURATION_MS: positiveInteger.default(1_000),
 
   OSM_API_URL: z.url().default("https://api.openstreetmap.org"),
   OSM_AUTH_TOKEN: z.string().trim().min(1).optional(),

@@ -209,6 +209,10 @@ export const stripAedTags = (
   return next;
 };
 
+/** Whether stripping AED tags would actually remove anything from `tags`. */
+export const hasStrippableAedTags = (tags: Record<string, string>): boolean =>
+  Object.keys(stripAedTags(tags)).length !== Object.keys(tags).length;
+
 /**
  * Merge managed tags onto an existing node's tags. Returns the new tag set and
  * whether any managed tag actually changed.
