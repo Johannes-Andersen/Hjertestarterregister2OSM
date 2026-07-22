@@ -19,7 +19,7 @@ This repo uses `pnpm` workspaces + Turborepo.
 
 ## Prerequisites
 
-- Node.js `v25` (see `.nvmrc`)
+- Node.js `v26` (see `.nvmrc`)
 - `pnpm` `v10`
 - PostgreSQL database (for run/issue persistence)
 - Hjertestarterregister API credentials
