@@ -2,11 +2,15 @@ import { Queue, Worker } from "bullmq";
 import { env } from "./config.ts";
 import { logger } from "./logger.ts";
 import { redis } from "./redis.ts";
-import { runFullSync, runIncrementalSync } from "./sync.ts";
+import {
+  runFullSync,
+  runIncrementalSync,
+  runReconcileCheckup,
+} from "./sync.ts";
 
 export const syncQueueName = "aed-registry-sync";
 
-type SyncJobName = "full-sync" | "incremental-sync";
+type SyncJobName = "full-sync" | "incremental-sync" | "reconcile-checkup";
 
 const log = logger.child({ module: "scheduler" });
 
@@ -23,6 +27,8 @@ export const startScheduler = async (): Promise<void> => {
     async (job) => {
       const jobLog = log.child({ jobId: job.id, sync: job.name });
       if (job.name === "full-sync") await runFullSync(jobLog);
+      else if (job.name === "reconcile-checkup")
+        await runReconcileCheckup(jobLog);
       else await runIncrementalSync(jobLog);
     },
     { connection: redis, concurrency: 1 },
@@ -44,6 +50,11 @@ export const startScheduler = async (): Promise<void> => {
     { every: env.INCREMENTAL_SYNC_INTERVAL_MS },
     { name: "incremental-sync" },
   );
+  await queue.upsertJobScheduler(
+    "reconcile-checkup",
+    { pattern: env.RECONCILE_CHECKUP_CRON, tz: env.FULL_SYNC_TIMEZONE },
+    { name: "reconcile-checkup" },
+  );
 
   // Bootstrap immediately so a fresh database is populated and downtime is
   // caught up without waiting for the next scheduled run.
@@ -54,6 +65,7 @@ export const startScheduler = async (): Promise<void> => {
       fullSyncCron: env.FULL_SYNC_CRON,
       timezone: env.FULL_SYNC_TIMEZONE,
       incrementalIntervalMs: env.INCREMENTAL_SYNC_INTERVAL_MS,
+      reconcileCheckupCron: env.RECONCILE_CHECKUP_CRON,
     },
     "Sync scheduler ready",
   );

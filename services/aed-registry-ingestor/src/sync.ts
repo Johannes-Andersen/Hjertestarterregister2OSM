@@ -17,6 +17,7 @@ import {
   type AedEvent,
   type AedEventSource,
   buildAedEvent,
+  CHECKUP_EVENT_PRIORITY,
   publishAedEvents,
 } from "./events.ts";
 import { parseAssets, registry, toRegistryDate } from "./registry.ts";
@@ -259,4 +260,35 @@ export const runIncrementalSync = async (log: Logger): Promise<void> => {
     { since, received: ASSETS.length, invalid, created, updated, published },
     "Incremental AED sync completed",
   );
+};
+
+/**
+ * Periodic full checkup: re-emit an `aed.updated` reconcile event for every
+ * active (non-deleted, non-mobile) AED, independent of whether it changed. This
+ * lets the reconciler re-verify each AED against OSM and repair drift a plain
+ * change-driven flow would never notice — a node deleted by someone, managed
+ * tags reverted, or a managed node moved. No `aed.deleted` events are emitted,
+ * so the mass-deletion circuit breaker is never involved.
+ */
+export const runReconcileCheckup = async (log: Logger): Promise<void> => {
+  log.info("Starting reconcile checkup");
+
+  const rows = await db.query.aed.findMany({
+    where: and(isNull(aed.deletedAt), eq(aed.isMobile, false)),
+  });
+
+  let published = 0;
+  for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + UPSERT_CHUNK_SIZE);
+    const events = chunk.map((row) =>
+      buildAedEvent("aed.updated", "full-checkup", row),
+    );
+    // Lower priority than the real-time events so a checkup never delays live
+    // create/update/delete reconciliation.
+    published += await publishAedEvents(events, log, {
+      priority: CHECKUP_EVENT_PRIORITY,
+    });
+  }
+
+  log.info({ active: rows.length, published }, "Reconcile checkup completed");
 };

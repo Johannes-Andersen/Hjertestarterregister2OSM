@@ -37,6 +37,11 @@ const envSchema = z.object({
   FULL_SYNC_CRON: z.string().trim().min(1).default("0 3 * * *"),
   FULL_SYNC_TIMEZONE: z.string().trim().min(1).default("Europe/Oslo"),
 
+  // When to run the periodic reconcile checkup: re-emits a reconcile event for
+  // every active AED so the reconciler re-verifies each against OSM and repairs
+  // drift. Runs in FULL_SYNC_TIMEZONE. Defaults to weekly (Sunday 04:00).
+  RECONCILE_CHECKUP_CRON: z.string().trim().min(1).default("0 4 * * 0"),
+
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),

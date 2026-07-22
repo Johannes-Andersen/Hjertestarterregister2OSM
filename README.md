@@ -73,6 +73,14 @@ change event for every difference it detects.
   cannot stream mass deletions downstream.
 - **Incremental sync** every 15 minutes (`INCREMENTAL_SYNC_INTERVAL_MS`): fetches
   only changes since the stored cursor. Deletions are handled by the full sync.
+- **Reconcile checkup** on a cron (`RECONCILE_CHECKUP_CRON`, default weekly,
+  `04:00` Sunday Europe/Oslo): re-emits an `aed.updated` event for every active
+  AED so `aed-reconciler` re-verifies each one against OSM and repairs drift a
+  change-driven flow would never notice (a node deleted by someone, managed tags
+  reverted, or a managed node moved). These events are enqueued at a lower BullMQ
+  priority than real-time create/update/delete events, so a bulk checkup never
+  delays live reconciliation. Emits no deletions, so the mass-deletion breaker is
+  never involved.
 - Stores the latest snapshot in the `aed` table; the cursor lives in
   `aed_registry_sync_state`.
 - Publishes one BullMQ job per change to the `aed-registry-events` queue:
@@ -95,6 +103,7 @@ Requires Postgres, Redis, and registry credentials. Env vars (see
 | `INCREMENTAL_SYNC_INTERVAL_MS`          | no       | `900000`                 |
 | `FULL_SYNC_CRON`                        | no       | `0 3 * * *`              |
 | `FULL_SYNC_TIMEZONE`                    | no       | `Europe/Oslo`            |
+| `RECONCILE_CHECKUP_CRON`                | no       | `0 4 * * 0` (weekly)     |
 | `HJERTESTARTERREGISTER_API_BASE_URL`    | no       | 113 production           |
 | `HJERTESTARTERREGISTER_OAUTH_TOKEN_URL` | no       | 113 production           |
 | `LOG_LEVEL`                             | no       | `info`                   |

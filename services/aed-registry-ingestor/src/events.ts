@@ -7,7 +7,7 @@ import { redis } from "./redis.ts";
 export const eventsQueueName = "aed-registry-events";
 
 export type AedEventType = "aed.created" | "aed.updated" | "aed.deleted";
-export type AedEventSource = "full-sync" | "incremental-sync";
+export type AedEventSource = "full-sync" | "incremental-sync" | "full-checkup";
 
 const serializeAed = (row: AedRow) => ({
   assetId: row.assetId,
@@ -66,19 +66,28 @@ const queue = new Queue<AedEvent>(eventsQueueName, {
   },
 });
 
+/**
+ * BullMQ priority for background full-checkup events. Real-time create/update/
+ * delete events are published without a priority, and BullMQ always processes
+ * unprioritized jobs before prioritized ones, so a bulk checkup never delays
+ * live reconciliation.
+ */
+export const CHECKUP_EVENT_PRIORITY = 10;
+
 export const publishAedEvents = async (
   events: AedEvent[],
   log: Logger,
+  { priority }: { priority?: number } = {},
 ): Promise<number> => {
   if (events.length === 0) return 0;
   await queue.addBulk(
     events.map((event) => ({
       name: event.type,
       data: event,
-      opts: { jobId: event.eventId },
+      opts: { jobId: event.eventId, priority },
     })),
   );
-  log.info({ published: events.length }, "Published AED events");
+  log.info({ published: events.length, priority }, "Published AED events");
   return events.length;
 };
 
