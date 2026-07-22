@@ -44,6 +44,12 @@ const envSchema = z.object({
   // Move a managed node only when the registry location differs by more than this.
   MOVE_DISTANCE_METERS: z.coerce.number().positive().default(15),
 
+  // Grace period before an `aed.deleted` actually removes the OSM node.
+  // Deactivations are frequently temporary (expired pads/battery); a
+  // reactivation within this window reuses the same node instead of
+  // delete-then-recreate churn. Defaults to 7 days.
+  DELETION_GRACE_PERIOD_MS: positiveInteger.default(7 * 24 * 60 * 60 * 1000),
+
   // When set, write an `.osc` + `.geojson` preview per changeset into this
   // folder (accumulating over time) for community review. Optional.
   PREVIEW_DIR: z.string().trim().min(1).optional(),

@@ -17,6 +17,7 @@ import {
   type OsmAedNode,
 } from "./osmAedRepository.ts";
 import { writePreview } from "./preview.ts";
+import { cancelDeferredDelete, scheduleDeferredDelete } from "./queue.ts";
 import {
   applyManagedTags,
   hasNoteOrFixme,
@@ -430,9 +431,37 @@ export const reconcile = async (
     return;
   }
 
-  const plan =
-    event.type === "aed.deleted"
-      ? await handleDelete(event.aed, log)
-      : await handleUpsert(event.aed, log);
+  if (event.type === "aed.deleted") {
+    // Deactivations are frequently temporary (expired pads/battery). Defer the
+    // OSM removal by a grace period so a reactivation within the window reuses
+    // the same node instead of delete-then-recreate churn.
+    await scheduleDeferredDelete(event);
+    log.info(
+      { graceMs: env.DELETION_GRACE_PERIOD_MS },
+      "Registry AED deleted; deferred OSM removal until after the grace period",
+    );
+    return;
+  }
+
+  // aed.created / aed.updated: the AED is active. Cancel any pending deferred
+  // removal so a reactivation keeps (and updates) the existing node in place.
+  if (await cancelDeferredDelete(event.assetGuid)) {
+    log.info("AED reactivated within grace period; cancelled pending removal");
+  }
+
+  const plan = await handleUpsert(event.aed, log);
+  await executePlan(plan, event.eventId, log);
+};
+
+/**
+ * Runs when a deferred-delete job fires: the AED stayed deleted through the
+ * whole grace period (no reactivation cancelled it), so remove it for real.
+ */
+export const runDeferredDelete = async (
+  event: AedEvent,
+  log: Logger,
+): Promise<void> => {
+  log.info("Grace period elapsed; removing AED from OSM");
+  const plan = await handleDelete(event.aed, log);
   await executePlan(plan, event.eventId, log);
 };

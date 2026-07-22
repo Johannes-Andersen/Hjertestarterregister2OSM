@@ -3,7 +3,8 @@ import { env } from "./config.ts";
 import { closeDatabase } from "./db/index.ts";
 import { aedEventSchema } from "./events.ts";
 import { logger } from "./logger.ts";
-import { reconcile } from "./reconcile.ts";
+import { closeQueue, DEFERRED_DELETE_JOB } from "./queue.ts";
+import { reconcile, runDeferredDelete } from "./reconcile.ts";
 import { redis } from "./redis.ts";
 
 const log = logger.child({ module: "bootstrap" });
@@ -12,14 +13,16 @@ const worker = new Worker(
   env.QUEUE_NAME,
   async (job) => {
     const event = aedEventSchema.parse(job.data);
-    await reconcile(
-      event,
-      logger.child({
-        eventId: event.eventId,
-        type: event.type,
-        assetId: event.assetId,
-      }),
-    );
+    const jobLog = logger.child({
+      eventId: event.eventId,
+      type: event.type,
+      assetId: event.assetId,
+    });
+    if (job.name === DEFERRED_DELETE_JOB) {
+      await runDeferredDelete(event, jobLog);
+    } else {
+      await reconcile(event, jobLog);
+    }
   },
   // Serialize reconciliation so OSM edits never race each other.
   {
@@ -56,6 +59,7 @@ const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
   shuttingDown = true;
   log.info({ signal }, "Starting graceful shutdown");
   await worker.close();
+  await closeQueue();
   await redis.quit();
   await closeDatabase();
   log.info("Graceful shutdown complete");

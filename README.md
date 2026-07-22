@@ -180,7 +180,13 @@ planned edits easy to review before/after an import.
 
 Per-event decisions:
 
-- **Deleted** — delete the OSM node(s) matching `ref:hjertestarterregister`.
+- **Deleted** — the OSM removal is **deferred** by a grace period
+  (`DELETION_GRACE_PERIOD_MS`, 7 days by default) via a delayed BullMQ job.
+  Registry deactivations are often temporary (expired pads/battery); if the AED
+  reactivates within the window the pending removal is cancelled and the existing
+  node is reused, avoiding delete-then-recreate churn (and a new node id). If it
+  stays deleted through the grace period, the node(s) matching
+  `ref:hjertestarterregister` are removed.
 - **Created / updated** — if a node already carries the ref, update its managed
   tags (`emergency`, `emergency:phone`, `ref:hjertestarterregister`,
   `opening_hours`, `level`); if several nodes share the ref, keep the one closest
@@ -202,6 +208,8 @@ Safeguards:
   preserved.
 - Rate-limits BullMQ job starts to `WORKER_RATE_LIMIT_MAX` per
   `WORKER_RATE_LIMIT_DURATION_MS` (3 jobs per second by default).
+- Defers deletions by `DELETION_GRACE_PERIOD_MS` (7 days) so a reactivated AED
+  reuses its existing node instead of being recreated.
 
 Requires Redis, read access to the osm-ingestor database, and (in live mode) an
 OSM OAuth token. Env vars (see [`.env.example`](services/aed-reconciler/.env.example)):
@@ -219,6 +227,7 @@ OSM OAuth token. Env vars (see [`.env.example`](services/aed-reconciler/.env.exa
 | `OSM_SERVICE_USERNAME`          | for node moves   | —                               |
 | `MERGE_DISTANCE_METERS`         | no               | `175`                           |
 | `MOVE_DISTANCE_METERS`          | no               | `15`                            |
+| `DELETION_GRACE_PERIOD_MS`      | no               | `604800000` (7 days)            |
 | `PREVIEW_DIR`                   | no               | — (disabled)                    |
 | `LOG_LEVEL`                     | no               | `info`                          |
 
