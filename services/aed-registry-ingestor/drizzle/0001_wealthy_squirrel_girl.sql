@@ -1,0 +1,1 @@
+DROP TABLE "aed_registry_event_outbox" CASCADE;

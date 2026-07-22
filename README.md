@@ -2,10 +2,11 @@
 
 Automated reconciliation between the [Norwegian AED registry (Hjertestarterregisteret)](https://hjertestarterregister.113.no/) and [OpenStreetMap](https://www.openstreetmap.org/).
 
-The project has two runtime parts:
+The project has three runtime parts:
 
-- `apps/reconciler`: loads registry + OSM data, plans and executes sync changes, stores metrics and issues.
-- `apps/website`: operational dashboard for run history and current issues.
+- `services/osm-ingestor`: maintains a local Norwegian OSM planet file and runs independently registered node-storage extensions.
+- `services/aed-registry-ingestor`: continuously imports the Norwegian AED registry and publishes AED lifecycle jobs.
+- `services/reconciler`: plans and executes reconciliation changes.
 
 ## Monorepo Overview
 
@@ -13,6 +14,9 @@ This repo uses `pnpm` workspaces + Turborepo.
 
 | Path                                 | Description                                                  |
 | ------------------------------------ | ------------------------------------------------------------ |
+| `services/osm-ingestor`              | Extensible OSM planet and minute replication ingestor        |
+| `services/aed-registry-ingestor`     | Full/incremental registry ingestion and AED event publishing |
+| `services/reconciler`                | Registry-to-OSM reconciliation service                       |
 | `packages/hjertestarterregister-sdk` | Typed API client for the registry (OAuth + assets endpoints) |
 | `packages/osm-sdk`                   | Typed OSM API client                                         |
 | `packages/typescript-config`         | Shared TypeScript configs                                    |
@@ -24,7 +28,7 @@ This repo uses `pnpm` workspaces + Turborepo.
 - PostgreSQL database (for run/issue persistence)
 - Hjertestarterregister API credentials
 - OSM OAuth bearer token
-- For website deployment/local preview with bindings: Cloudflare + configured Hyperdrive/KV in `apps/website/wrangler.jsonc`
+- For website deployment/local preview with bindings: Cloudflare + configured Hyperdrive/KV in `services/website/wrangler.jsonc`
 
 ## Install
 
@@ -32,9 +36,104 @@ This repo uses `pnpm` workspaces + Turborepo.
 pnpm install
 ```
 
+## OSM Ingestor
+
+`services/osm-ingestor` runs continuously. It checks the Geofabrik Norway
+planet file immediately at startup and every day at 12:00 Europe/Oslo time,
+then applies OSM minute replication changes until caught up. Planet downloads
+must live on durable storage.
+
+The core service maintains replication and planet state. Its currently enabled
+`aed` extension maintains:
+
+- `osm_aed`: the latest known state of every current or historical AED node.
+- `osm_aed_history`: one immutable row per observed OSM node version.
+- `osm_replication_state`: the last successfully applied minute sequence.
+- `osm_planet_import_state`: metadata for the planet file stored on disk.
+
+Run locally:
+
+```bash
+cp services/osm-ingestor/.env.example services/osm-ingestor/.env
+pnpm --filter osm-ingestor start
+```
+
+Build and run its container from the repository root:
+
+```bash
+docker build -f services/osm-ingestor/Dockerfile -t osm-ingestor .
+docker run --rm \
+  -e DATABASE_URL='postgres://username:password@host.docker.internal:5432/osm_ingestor' \
+  -v osm-planet:/data \
+  osm-ingestor
+```
+
+The schema is defined with Drizzle and its committed migrations run during
+service startup. Useful development commands are:
+
+```bash
+pnpm --filter osm-ingestor db:generate
+pnpm --filter osm-ingestor db:migrate
+pnpm --filter osm-ingestor db:studio
+```
+
+Each OSM node extension lives under `src/extensions/<name>` and owns its tag
+matching, Drizzle schema, version-history rules, and planet reconciliation.
+Register extensions in `src/extensions/index.ts`. In containers, use a
+PostgreSQL URL whose host is reachable from the container.
+
+## AED Registry Ingestor
+
+`services/aed-registry-ingestor` is a long-running service with two serialized
+in-process schedules:
+
+- An incremental changed/deleted check every 15 minutes.
+- A full registry snapshot every day at 15:00 Europe/Oslo time.
+
+It stores the current registry snapshot in PostgreSQL and publishes one job per
+lifecycle event to the `aed-registry-events` queue. Job names are
+`aed.created`, `aed.updated`, and `aed.deleted`; each payload contains the event
+ID, source, timestamp, asset identity, and serialized AED snapshot. Events are
+published directly after local changes commit. BullMQ is used only for the
+outbound `aed-registry-events` queue; internal scheduling does not use Redis
+queues.
+
+```bash
+cp services/aed-registry-ingestor/.env.example services/aed-registry-ingestor/.env
+pnpm --filter aed-registry-ingestor start
+```
+
+Build and run its container from the repository root:
+
+```bash
+docker build \
+  -f services/aed-registry-ingestor/Dockerfile \
+  -t aed-registry-ingestor .
+
+docker run --rm \
+  --add-host=host.docker.internal:host-gateway \
+  -e HJERTESTARTERREGISTER_CLIENT_ID='<client-id>' \
+  -e HJERTESTARTERREGISTER_CLIENT_SECRET='<client-secret>' \
+  -e DATABASE_URL='postgres://johannes.andersen%40schibsted.com@host.docker.internal:5432/aed_registry_ingestor' \
+  -e REDIS_URL='redis://host.docker.internal:6379' \
+  aed-registry-ingestor
+```
+
+Redis defaults to `redis://127.0.0.1:6379`. The service creates its PostgreSQL
+tables by running its committed Drizzle migrations at startup. Event consumers
+are intentionally separate from this service and can attach BullMQ workers to
+`aed-registry-events`. Inside a container, configure PostgreSQL and Redis hosts
+that are reachable from the container, as in the example above.
+
+```bash
+pnpm --filter aed-registry-ingestor db:generate
+pnpm --filter aed-registry-ingestor db:migrate
+pnpm --filter aed-registry-ingestor db:studio
+```
+
 ## Environment
 
-`apps/reconciler` reads environment variables via `apps/reconciler/src/config.ts`.
+`services/reconciler` reads environment variables via `services/reconciler/src/config.ts`.
 
 Required:
 
@@ -50,7 +149,7 @@ Optional:
 - `HJERTESTARTERREGISTER_OAUTH_TOKEN_URL`
 - `LOG_LEVEL` (`fatal`, `error`, `warn`, `info`, `debug`, `trace`; default `debug`)
 
-Example `apps/reconciler/.env`:
+Example `services/reconciler/.env`:
 
 ```bash
 DRY=true
@@ -62,13 +161,13 @@ OSM_AUTH_TOKEN=...
 
 Notes:
 
-- Preview files are written to `apps/reconciler/out/` (`.osc` + `.geojson`)
+- Preview files are written to `services/reconciler/out/` (`.osc` + `.geojson`)
 - In dry-run mode, upload to OSM is skipped.
 - In live mode, planned changes are uploaded to OSM using batched changesets.
 
 ## OSM Auth Token Setup (Service Account)
 
-`apps/reconciler` expects `OSM_AUTH_TOKEN` to be an OSM OAuth2 access token.
+`services/reconciler` expects `OSM_AUTH_TOKEN` to be an OSM OAuth2 access token.
 OSM does not offer a `client_credentials` flow for map edits, so token setup is a one-time manual authorization for a dedicated OSM account.
 
 1. Create or log in to your dedicated OSM service account.
@@ -131,16 +230,16 @@ This creates:
 ## Running the Reconciler
 
 ```bash
-node --env-file=./apps/reconciler/.env apps/reconciler/src/index.ts
+node --env-file=./services/reconciler/.env services/reconciler/src/index.ts
 ```
 
 ## Ubuntu Deployment (Every 12 Hours)
 
 Templates for a one-shot systemd service and 12-hour timer are included:
 
-- `apps/reconciler/deploy/run-reconciler.sh`
-- `apps/reconciler/deploy/reconciler.service`
-- `apps/reconciler/deploy/reconciler.timer`
+- `services/reconciler/deploy/run-reconciler.sh`
+- `services/reconciler/deploy/reconciler.service`
+- `services/reconciler/deploy/reconciler.timer`
 
 Quick setup on the server:
 
@@ -156,21 +255,21 @@ pnpm install --frozen-lockfile
 3. Create env file:
 
 ```bash
-cp /opt/hjertestarterregister2osm/apps/reconciler/.env.example /opt/hjertestarterregister2osm/apps/reconciler/.env
+cp /opt/hjertestarterregister2osm/services/reconciler/.env.example /opt/hjertestarterregister2osm/services/reconciler/.env
 ```
 
-4. Fill in secrets in `/opt/hjertestarterregister2osm/apps/reconciler/.env`.
+4. Fill in secrets in `/opt/hjertestarterregister2osm/services/reconciler/.env`.
 5. Ensure the run script is executable:
 
 ```bash
-chmod +x /opt/hjertestarterregister2osm/apps/reconciler/deploy/run-reconciler.sh
+chmod +x /opt/hjertestarterregister2osm/services/reconciler/deploy/run-reconciler.sh
 ```
 
 6. Copy systemd templates and adjust `User`, `Group`, and `WorkingDirectory` if needed:
 
 ```bash
-sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.service /etc/systemd/system/reconciler.service
-sudo cp /opt/hjertestarterregister2osm/apps/reconciler/deploy/reconciler.timer /etc/systemd/system/reconciler.timer
+sudo cp /opt/hjertestarterregister2osm/services/reconciler/deploy/reconciler.service /etc/systemd/system/reconciler.service
+sudo cp /opt/hjertestarterregister2osm/services/reconciler/deploy/reconciler.timer /etc/systemd/system/reconciler.timer
 ```
 
 7. Enable 12-hour runs:
@@ -218,7 +317,7 @@ pnpm build       # Full build
 
 ## Reconciler Flow
 
-`apps/reconciler/src/index.ts` runs one job:
+`services/reconciler/src/index.ts` runs one job:
 
 1. `reconciliation` (fetch, plan, safeguard, write previews, optionally upload)
 
@@ -299,7 +398,7 @@ flowchart TD
 
 10. **Aggregate metrics + deletion safeguard** — Change counts are aggregated across all tasks and written to `sync_runs`. Then a safety check aborts if `planned_deletes / total_osm_nodes > maxDeleteFraction` (default `0.5`).
 
-11. **Write files + optional upload** — All task plans are merged, preview files are written (`apps/reconciler/out/dry-run-changes.osc` and `.geojson`), and then:
+11. **Write files + optional upload** — All task plans are merged, preview files are written (`services/reconciler/out/dry-run-changes.osc` and `.geojson`), and then:
     - **Dry-run:** upload is skipped.
     - **Live:** `uploadChanges` sends batched changesets to OSM.
 
@@ -313,7 +412,7 @@ flowchart TD
 | `unmanagedMergeDistanceMeters`  | 175 m   | Max distance to merge an unmanaged OSM node with a registry AED            |
 | `maxDeleteFraction`             | 0.5     | Abort run if planned deletions exceed this fraction of total OSM AED nodes |
 
-See [apps/reconciler/src/config.ts](apps/reconciler/src/config.ts) for all configuration.
+See [services/reconciler/src/config.ts](services/reconciler/src/config.ts) for all configuration.
 
 ## Issue Types
 

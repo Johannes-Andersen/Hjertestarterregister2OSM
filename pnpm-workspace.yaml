@@ -1,7 +1,8 @@
 packages:
-  - apps/*
+  - services/*
   - packages/*
 allowBuilds:
+  esbuild: true
   msgpackr-extract: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:

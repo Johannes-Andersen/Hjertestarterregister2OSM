@@ -76,11 +76,13 @@ export class HjertestarterregisterApiClient {
 
   async searchDeletedAssets(
     params: SinceDateParams = {},
+    options: CallOptions = {},
   ): Promise<PublicAssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/deleted",
       query: params,
+      signal: options.signal,
     });
   }
 

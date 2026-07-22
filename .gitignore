@@ -21,7 +21,7 @@ build
 dist
 
 # Large local data files
-apps/osm-ingestor/data/
+services/osm-ingestor/data/
 
 # Debug
 npm-debug.log*
