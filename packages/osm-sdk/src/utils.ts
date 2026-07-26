@@ -78,13 +78,13 @@ export const buildChangesetComment = ({
   commentSubject: string;
 }) => {
   const labels: string[] = [];
-  if (createCount > 0) labels.push("Added");
-  if (modifyCount > 0) labels.push("Modified");
-  if (deleteCount > 0) labels.push("Deleted");
+  if (createCount > 0) labels.push("Add");
+  if (modifyCount > 0) labels.push("Update");
+  if (deleteCount > 0) labels.push("Remove");
 
   const actionLabel = labels.length
     ? operationListFormatter.format(labels)
-    : "Updated";
+    : "Update";
 
   return `${actionLabel} ${commentSubject}`;
 };

@@ -1,0 +1,1 @@
+ALTER TABLE "aed" ALTER COLUMN "site_floor_number" SET DATA TYPE integer;

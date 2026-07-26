@@ -1,4 +1,4 @@
-import { Agent, Headers, RetryAgent } from "undici";
+import { Agent, Headers } from "undici";
 import * as z from "zod";
 import { HjertestarterregisterApiError } from "./errors.ts";
 import type {
@@ -7,6 +7,7 @@ import type {
   AssetListResponse,
   AssetMutationResponse,
   AssetUpsertPayload,
+  CallOptions,
   CreateMessagePayload,
   HjertestarterregisterApiClientOptions,
   OAuthAccessTokenResponse,
@@ -38,7 +39,6 @@ const configSchema = z.object({
     .default("https://hjertestarterregister.113.no/ords/api/oauth/token"),
   clientId: z.string().min(1),
   clientSecret: z.string().min(1),
-  maxRetries: z.int().nonnegative().default(3),
 });
 
 export class HjertestarterregisterApiClient {
@@ -47,7 +47,7 @@ export class HjertestarterregisterApiClient {
 
   private readonly clientId: string;
   private readonly clientSecret: string;
-  private readonly dispatcher: RetryAgent;
+  private readonly dispatcher: Agent;
 
   private cachedToken?: string;
   private cachedTokenExpiresAtMs?: number;
@@ -59,60 +59,30 @@ export class HjertestarterregisterApiClient {
     this.oauthTokenUrl = new URL(config.oauthTokenUrl);
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-
-    this.dispatcher = new RetryAgent(new Agent(), {
-      maxRetries: config.maxRetries,
-      throwOnError: false,
-      retry: (error, context, callback) => {
-        const {
-          state,
-          opts: { retryOptions },
-        } = context;
-
-        const maxRetries = retryOptions?.maxRetries || config.maxRetries;
-        const minTimeout = retryOptions?.minTimeout || 1000;
-        const timeoutFactor = retryOptions?.timeoutFactor || 2;
-        const maxTimeout = retryOptions?.maxTimeout || 30_000;
-
-        const errorCode = (error as { code?: string }).code;
-        const statusCode = (error as { statusCode?: number }).statusCode;
-
-        console.warn(
-          `[hjertestarterregister-sdk] retry ${state.counter}/${maxRetries} ` +
-            `(code=${errorCode ?? "-"} status=${statusCode ?? "-"}) ` +
-            `${error.message}`,
-        );
-
-        if (state.counter >= maxRetries) return callback(error);
-
-        const delayMs = Math.min(
-          minTimeout * timeoutFactor ** state.counter,
-          maxTimeout,
-        );
-
-        state.counter++;
-        setTimeout(() => callback(null), delayMs);
-      },
-    });
+    this.dispatcher = new Agent();
   }
 
   async searchAssets(
     params: SearchAssetsParams = {},
+    options: CallOptions = {},
   ): Promise<PublicAssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
       path: "assets/search/",
       query: params,
+      signal: options.signal,
     });
   }
 
   async searchDeletedAssets(
     params: SinceDateParams = {},
+    options: CallOptions = {},
   ): Promise<PublicAssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
-      path: "assets/deleted/",
+      path: "assets/deleted",
       query: params,
+      signal: options.signal,
     });
   }
 
@@ -121,7 +91,7 @@ export class HjertestarterregisterApiClient {
   ): Promise<AssetListResponse> {
     return this.request<PublicAssetListResponse>({
       method: "GET",
-      path: "assets/inactive/",
+      path: "assets/inactive",
       query: params,
     });
   }
@@ -210,12 +180,13 @@ export class HjertestarterregisterApiClient {
     path,
     query,
     body,
+    signal,
   }: RequestOptions): Promise<TResponse> {
     const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
     const url = new URL(normalizedPath, this.baseUrl);
     applyQuery(url, query);
 
-    const bearerToken = await this.getAccessToken();
+    const bearerToken = await this.getAccessToken(signal);
     const headers = new Headers({
       Accept: "application/json",
       Authorization: `Bearer ${bearerToken}`,
@@ -233,6 +204,7 @@ export class HjertestarterregisterApiClient {
       method,
       headers,
       body: requestBody,
+      signal,
     });
 
     const text = await responseBody.text();
@@ -280,12 +252,10 @@ export class HjertestarterregisterApiClient {
       );
     }
 
-    console.log(`Successful ${method} request to ${url.pathname}`);
-
     return payload as TResponse;
   }
 
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(signal?: AbortSignal): Promise<string> {
     if (
       this.cachedToken &&
       this.cachedTokenExpiresAtMs !== undefined &&
@@ -296,7 +266,7 @@ export class HjertestarterregisterApiClient {
 
     if (this.pendingTokenPromise) return this.pendingTokenPromise;
 
-    this.pendingTokenPromise = this.requestAccessToken()
+    this.pendingTokenPromise = this.requestAccessToken(signal)
       .then((tokenResponse) => {
         this.cachedToken = tokenResponse.access_token;
         this.cachedTokenExpiresAtMs =
@@ -310,7 +280,9 @@ export class HjertestarterregisterApiClient {
     return this.pendingTokenPromise;
   }
 
-  private async requestAccessToken(): Promise<OAuthAccessTokenResponse> {
+  private async requestAccessToken(
+    signal?: AbortSignal,
+  ): Promise<OAuthAccessTokenResponse> {
     const authorization = `Basic ${btoa(`${this.clientId}:${this.clientSecret}`)}`;
 
     const { statusCode, body } = await this.dispatcher.request({
@@ -325,6 +297,7 @@ export class HjertestarterregisterApiClient {
       body: new URLSearchParams({
         grant_type: "client_credentials",
       }).toString(),
+      signal,
     });
 
     const text = await body.text();

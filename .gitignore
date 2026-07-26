@@ -20,6 +20,9 @@ out/
 build
 dist
 
+# Large local data files
+services/osm-ingestor/data/
+
 # Debug
 npm-debug.log*
 
@@ -29,3 +32,6 @@ npm-debug.log*
 
 # Cloudflare 
 .wrangler
+
+# Edit preview directory
+services/aed-reconciler/preview

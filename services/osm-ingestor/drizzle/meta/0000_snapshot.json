@@ -1,0 +1,453 @@
+{
+  "id": "8cfa008d-3283-4c7a-b997-fadd93366cc4",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.osm_sync_state": {
+      "name": "osm_sync_state",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "smallint",
+          "primaryKey": true,
+          "notNull": true,
+          "default": 1
+        },
+        "replication_sequence": {
+          "name": "replication_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replication_timestamp": {
+          "name": "replication_timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replication_base_url": {
+          "name": "replication_base_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_source_url": {
+          "name": "planet_source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_file_path": {
+          "name": "planet_file_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_etag": {
+          "name": "planet_etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_last_modified": {
+          "name": "planet_last_modified",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_content_length": {
+          "name": "planet_content_length",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planet_imported_at": {
+          "name": "planet_imported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "osm_sync_state_singleton_check": {
+          "name": "osm_sync_state_singleton_check",
+          "value": "\"osm_sync_state\".\"id\" = 1"
+        },
+        "osm_sync_state_replication_sequence_check": {
+          "name": "osm_sync_state_replication_sequence_check",
+          "value": "\"osm_sync_state\".\"replication_sequence\" IS NULL OR \"osm_sync_state\".\"replication_sequence\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.osm_aed": {
+      "name": "osm_aed",
+      "schema": "",
+      "columns": {
+        "element_type": {
+          "name": "element_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "element_id": {
+          "name": "element_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changeset": {
+          "name": "changeset",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uid": {
+          "name": "uid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_name": {
+          "name": "user_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "osm_timestamp": {
+          "name": "osm_timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "osm_aed_deleted_at_idx": {
+          "name": "osm_aed_deleted_at_idx",
+          "columns": [
+            {
+              "expression": "deleted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "osm_aed_osm_timestamp_idx": {
+          "name": "osm_aed_osm_timestamp_idx",
+          "columns": [
+            {
+              "expression": "osm_timestamp",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "osm_aed_tags_gin_idx": {
+          "name": "osm_aed_tags_gin_idx",
+          "columns": [
+            {
+              "expression": "tags",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "osm_aed_element_type_element_id_pk": {
+          "name": "osm_aed_element_type_element_id_pk",
+          "columns": ["element_type", "element_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "osm_aed_element_type_check": {
+          "name": "osm_aed_element_type_check",
+          "value": "\"osm_aed\".\"element_type\" = 'node'"
+        },
+        "osm_aed_element_id_check": {
+          "name": "osm_aed_element_id_check",
+          "value": "\"osm_aed\".\"element_id\" > 0"
+        },
+        "osm_aed_latitude_check": {
+          "name": "osm_aed_latitude_check",
+          "value": "\"osm_aed\".\"latitude\" BETWEEN -90 AND 90"
+        },
+        "osm_aed_longitude_check": {
+          "name": "osm_aed_longitude_check",
+          "value": "\"osm_aed\".\"longitude\" BETWEEN -180 AND 180"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.osm_aed_history": {
+      "name": "osm_aed_history",
+      "schema": "",
+      "columns": {
+        "history_id": {
+          "name": "history_id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "element_type": {
+          "name": "element_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "element_id": {
+          "name": "element_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changeset": {
+          "name": "changeset",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uid": {
+          "name": "uid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_name": {
+          "name": "user_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "osm_timestamp": {
+          "name": "osm_timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_aed": {
+          "name": "is_aed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "replication_sequence": {
+          "name": "replication_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "osm_aed_history_element_idx": {
+          "name": "osm_aed_history_element_idx",
+          "columns": [
+            {
+              "expression": "element_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "element_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "osm_aed_history_timestamp_idx": {
+          "name": "osm_aed_history_timestamp_idx",
+          "columns": [
+            {
+              "expression": "osm_timestamp",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "osm_aed_history_element_version_unique": {
+          "name": "osm_aed_history_element_version_unique",
+          "nullsNotDistinct": false,
+          "columns": ["element_type", "element_id", "version"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "osm_aed_history_element_type_check": {
+          "name": "osm_aed_history_element_type_check",
+          "value": "\"osm_aed_history\".\"element_type\" = 'node'"
+        },
+        "osm_aed_history_element_id_check": {
+          "name": "osm_aed_history_element_id_check",
+          "value": "\"osm_aed_history\".\"element_id\" > 0"
+        },
+        "osm_aed_history_version_check": {
+          "name": "osm_aed_history_version_check",
+          "value": "\"osm_aed_history\".\"version\" > 0"
+        },
+        "osm_aed_history_source_check": {
+          "name": "osm_aed_history_source_check",
+          "value": "\"osm_aed_history\".\"source\" IN ('planet', 'minute')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,0 +1,101 @@
+name: hjertestarterregister2osm
+
+# Spins up the whole repo: PostgreSQL (two databases), Redis, and both services.
+# Provide registry credentials in a root .env before running:
+#   HJERTESTARTERREGISTER_CLIENT_ID=...
+#   HJERTESTARTERREGISTER_CLIENT_SECRET=...
+# Then: docker compose up --build
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18+ images store data under /var/lib/postgresql/<major>;
+      # mount the parent directory, not /var/lib/postgresql/data.
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  aed-registry-ingestor:
+    build:
+      context: .
+      dockerfile: services/aed-registry-ingestor/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/aed_registry_ingestor
+      REDIS_URL: redis://redis:6379
+      HJERTESTARTERREGISTER_CLIENT_ID: ${HJERTESTARTERREGISTER_CLIENT_ID:?set it in a root .env}
+      HJERTESTARTERREGISTER_CLIENT_SECRET: ${HJERTESTARTERREGISTER_CLIENT_SECRET:?set it in a root .env}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  osm-ingestor:
+    build:
+      context: .
+      dockerfile: services/osm-ingestor/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/osm_ingestor
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - osm-planet:/data
+
+  aed-reconciler:
+    build:
+      context: .
+      dockerfile: services/aed-reconciler/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Ordered after osm-ingestor so the osm_aed table exists.
+      osm-ingestor:
+        condition: service_started
+    environment:
+      # Reads the osm_aed table from the osm-ingestor database.
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/osm_ingestor
+      REDIS_URL: redis://redis:6379
+      # Dry-run by default: nothing is uploaded to OSM. Set DRY=false to go live.
+      DRY: ${DRY:-true}
+      OSM_API_URL: ${OSM_API_URL:-https://api.openstreetmap.org}
+      OSM_AUTH_TOKEN: ${OSM_AUTH_TOKEN:-}
+      OSM_SERVICE_USERNAME: ${OSM_SERVICE_USERNAME:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+volumes:
+  postgres-data:
+  redis-data:
+  osm-planet:

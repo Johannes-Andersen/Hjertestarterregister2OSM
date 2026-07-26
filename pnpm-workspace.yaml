@@ -1,10 +1,9 @@
 packages:
-  - apps/*
+  - services/*
   - packages/*
 allowBuilds:
   esbuild: true
-  sharp: true
-  workerd: true
+  msgpackr-extract: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   # Renovate security update: undici@8.5.0

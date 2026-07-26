@@ -19,6 +19,7 @@
         "noUselessFragments": "off"
       },
       "suspicious": {
+        "noConsole": "warn",
         "noUndeclaredEnvVars": "error"
       }
     }
