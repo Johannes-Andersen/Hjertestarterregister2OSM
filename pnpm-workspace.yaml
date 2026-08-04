@@ -7,5 +7,5 @@ allowBuilds:
   workerd: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
-  # Renovate security update: undici@8.5.0
-  - undici@8.5.0
+  # Renovate security update: undici@8.5.0 || 8.9.0
+  - undici@8.5.0 || 8.9.0
