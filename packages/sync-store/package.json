@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "postgres": "3.4.9",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
